@@ -19,6 +19,7 @@ export default function Home() {
           <Link href="/manufacturer" style={navBtn}>Manufacturer</Link>
           <Link href="/transporter" style={navBtn}>Transporter</Link>
           <Link href="/admin" style={adminBtn}>Admin</Link>
+        <Link href="/shopkeeper" style={navBtn}>Shopkeeper</Link>
         </div>
       </header>
 
