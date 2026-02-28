@@ -1,6 +1,7 @@
 let orders = [];
 
 export default function handler(req, res) {
+
   // CREATE ORDER
   if (req.method === "POST") {
     const newOrder = {
@@ -16,12 +17,12 @@ export default function handler(req, res) {
     return res.status(200).json(newOrder);
   }
 
-  // GET ALL ORDERS
+  // GET ALL
   if (req.method === "GET") {
     return res.status(200).json(orders);
   }
 
-  // UPDATE ORDER
+  // UPDATE
   if (req.method === "PUT") {
     const { id, status, transporter, currentLat, currentLng } = req.body;
 
@@ -40,5 +41,5 @@ export default function handler(req, res) {
     return res.status(200).json({ message: "Updated" });
   }
 
-  return res.status(405).json({ message: "Method not allowed" });
+  res.status(405).json({ message: "Method not allowed" });
 }
