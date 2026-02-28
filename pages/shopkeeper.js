@@ -1,56 +1,175 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function Shopkeeper() {
-  const [orders, setOrders] = useState([]);
+  const [form, setForm] = useState({
+    shopName: "",
+    product: "",
+    weight: "",
+    dropLat: "",
+    dropLng: ""
+  });
 
-  const fetchOrders = async () => {
-    const res = await fetch("/api/orders");
-    const data = await res.json();
-    setOrders(data);
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const submitOrder = async () => {
+    if (!form.shopName || !form.product || !form.dropLat || !form.dropLng) {
+      alert("Please fill all required fields");
+      return;
+    }
 
-  const generateInvoice = (order) => {
-    const win = window.open("", "_blank");
+    await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        pickupLat: null,   // Manufacturer will update this
+        pickupLng: null
+      })
+    });
 
-    win.document.write(`
-      <h2>SwiftLogix Invoice</h2>
-      <p><b>Order ID:</b> ${order.id}</p>
-      <p><b>Shop:</b> ${order.shopName}</p>
-      <p><b>Product:</b> ${order.productType}</p>
-      <p><b>Weight:</b> ${order.weight} tons</p>
-      <p><b>Status:</b> ${order.status}</p>
-      <hr/>
-      <h3>Total Freight: ₹ ${order.weight * 1500}</h3>
-    `);
+    alert("Order Submitted Successfully 🚚");
 
-    win.document.close();
+    setForm({
+      shopName: "",
+      product: "",
+      weight: "",
+      dropLat: "",
+      dropLng: ""
+    });
   };
 
   return (
-    <div style={{ padding: 30 }}>
-      <h2>Shopkeeper Dashboard</h2>
+    <div style={container}>
+      <div style={card}>
+        <h1 style={title}>SwiftLogix</h1>
+        <p style={subtitle}>Create Logistics Order</p>
 
-      {orders.map(order => (
-        <div key={order.id} style={card}>
-          <p><b>ID:</b> {order.id}</p>
-          <p><b>Status:</b> {order.status}</p>
+        <input
+          name="shopName"
+          placeholder="Shop Name"
+          value={form.shopName}
+          onChange={handleChange}
+          style={input}
+        />
 
-          <button onClick={() => generateInvoice(order)}>
-            Generate Invoice
-          </button>
+        <input
+          name="product"
+          placeholder="Product Type"
+          value={form.product}
+          onChange={handleChange}
+          style={input}
+        />
+
+        <input
+          name="weight"
+          placeholder="Weight (in tons)"
+          value={form.weight}
+          onChange={handleChange}
+          style={input}
+        />
+
+        <h3 style={sectionTitle}>Drop Location</h3>
+
+        <div style={row}>
+          <input
+            name="dropLat"
+            placeholder="Drop Latitude"
+            value={form.dropLat}
+            onChange={handleChange}
+            style={halfInput}
+          />
+
+          <input
+            name="dropLng"
+            placeholder="Drop Longitude"
+            value={form.dropLng}
+            onChange={handleChange}
+            style={halfInput}
+          />
         </div>
-      ))}
+
+        <p style={{ fontSize: "13px", color: "#666", marginTop: "5px" }}>
+          Pickup location will be updated by Manufacturer.
+        </p>
+
+        <button onClick={submitOrder} style={button}>
+          Submit Order
+        </button>
+      </div>
     </div>
   );
 }
 
+const container = {
+  minHeight: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  background: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+  padding: "20px"
+};
+
 const card = {
-  padding: 15,
-  marginBottom: 15,
-  background: "#f1f1f1",
-  borderRadius: 10
+  background: "white",
+  padding: "30px",
+  borderRadius: "20px",
+  width: "100%",
+  maxWidth: "420px",
+  boxShadow: "0 15px 40px rgba(0,0,0,0.2)"
+};
+
+const title = {
+  margin: 0,
+  fontSize: "28px",
+  fontWeight: "bold",
+  textAlign: "center"
+};
+
+const subtitle = {
+  textAlign: "center",
+  marginBottom: "20px",
+  color: "#666"
+};
+
+const sectionTitle = {
+  marginTop: "20px",
+  fontSize: "16px"
+};
+
+const input = {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "12px",
+  borderRadius: "10px",
+  border: "1px solid #ddd",
+  fontSize: "14px"
+};
+
+const halfInput = {
+  width: "48%",
+  padding: "12px",
+  borderRadius: "10px",
+  border: "1px solid #ddd",
+  fontSize: "14px"
+};
+
+const row = {
+  display: "flex",
+  justifyContent: "space-between",
+  marginBottom: "10px"
+};
+
+const button = {
+  width: "100%",
+  padding: "14px",
+  marginTop: "20px",
+  borderRadius: "12px",
+  border: "none",
+  background: "#00c853",
+  color: "white",
+  fontSize: "16px",
+  fontWeight: "bold",
+  cursor: "pointer"
 };
