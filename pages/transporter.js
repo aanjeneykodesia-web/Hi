@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 export default function Transporter() {
   const [orders, setOrders] = useState([]);
   const [verifyId, setVerifyId] = useState("");
-  const activeIntervals = useRef({}); // prevent multiple intervals
+  const activeIntervals = useRef({});
 
   // Fetch all orders
   const fetchOrders = async () => {
@@ -25,6 +25,8 @@ export default function Transporter() {
       return;
     }
 
+    if (activeIntervals.current[order.id]) return;
+
     let currentLat = parseFloat(order.pickupLat);
     let currentLng = parseFloat(order.pickupLng);
     const dropLat = parseFloat(order.dropLat);
@@ -42,9 +44,6 @@ export default function Transporter() {
         currentLng
       })
     });
-
-    // Prevent duplicate movement intervals
-    if (activeIntervals.current[order.id]) return;
 
     const moveInterval = setInterval(async () => {
       currentLat += (dropLat - currentLat) * 0.15;
@@ -64,6 +63,7 @@ export default function Transporter() {
         })
       });
 
+      // Stop when reached
       if (distance < 0.0005) {
         clearInterval(moveInterval);
         delete activeIntervals.current[order.id];
@@ -73,9 +73,11 @@ export default function Transporter() {
     activeIntervals.current[order.id] = moveInterval;
   };
 
-  // MANUAL DELIVERY VERIFICATION
+  // VERIFY DELIVERY
   const verifyDelivery = async () => {
-    const order = orders.find(o => o.id.toString() === verifyId);
+    const order = orders.find(
+      (o) => o.id.toString() === verifyId.trim()
+    );
 
     if (!order) {
       alert("Invalid Order ID");
@@ -85,6 +87,12 @@ export default function Transporter() {
     if (order.status !== "In Transit") {
       alert("Order must be In Transit");
       return;
+    }
+
+    // Stop movement if still running
+    if (activeIntervals.current[order.id]) {
+      clearInterval(activeIntervals.current[order.id]);
+      delete activeIntervals.current[order.id];
     }
 
     await fetch("/api/orders", {
@@ -106,13 +114,18 @@ export default function Transporter() {
 
       {orders.length === 0 && <p>No orders available</p>}
 
-      {orders.map(order => (
+      {orders.map((order) => (
         <div key={order.id} style={card}>
-          <p><b>Order ID:</b> {order.id}</p>
+          {/* ORDER ID HIDDEN */}
+
           <p><b>Status:</b> {order.status}</p>
+
           <p>
-            <b>Route:</b> {order.pickupLat}, {order.pickupLng} →{" "}
-            {order.dropLat}, {order.dropLng}
+            <b>Route:</b>{" "}
+            {order.pickupLat || "Not set"},{" "}
+            {order.pickupLng || ""} →{" "}
+            {order.dropLat || "Not set"},{" "}
+            {order.dropLng || ""}
           </p>
 
           <p>
@@ -141,6 +154,7 @@ export default function Transporter() {
       {/* DELIVERY VERIFICATION SECTION */}
       <div style={{ marginTop: 40 }}>
         <h3>🔐 Verify Delivery</h3>
+
         <input
           type="text"
           placeholder="Enter Order ID"
@@ -148,6 +162,7 @@ export default function Transporter() {
           onChange={(e) => setVerifyId(e.target.value)}
           style={input}
         />
+
         <button style={button} onClick={verifyDelivery}>
           Verify
         </button>
