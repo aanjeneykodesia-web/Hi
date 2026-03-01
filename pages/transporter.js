@@ -3,9 +3,9 @@ import { useEffect, useState, useRef } from "react";
 export default function Transporter() {
   const [orders, setOrders] = useState([]);
   const [verifyId, setVerifyId] = useState("");
+  const [verifyOrder, setVerifyOrder] = useState(null); // popup control
   const activeIntervals = useRef({});
 
-  // Fetch all orders
   const fetchOrders = async () => {
     const res = await fetch("/api/orders");
     const data = await res.json();
@@ -18,28 +18,34 @@ export default function Transporter() {
     return () => clearInterval(interval);
   }, []);
 
-  // START DELIVERY WITH LIVE MOVEMENT
+  // CHECK IF ANY ORDER IS ACTIVE
+  const isOrderActive = () => {
+    return orders.some((o) => o.status === "In Transit");
+  };
+
+  // START DELIVERY
   const startDelivery = async (order) => {
+    if (isOrderActive()) {
+      alert("You can only deliver one order at a time!");
+      return;
+    }
+
     if (!order.pickupLat || !order.dropLat) {
       alert("Pickup or Drop coordinates missing");
       return;
     }
-
-    if (activeIntervals.current[order.id]) return;
 
     let currentLat = parseFloat(order.pickupLat);
     let currentLng = parseFloat(order.pickupLng);
     const dropLat = parseFloat(order.dropLat);
     const dropLng = parseFloat(order.dropLng);
 
-    // Mark as In Transit
     await fetch("/api/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: order.id,
         status: "In Transit",
-        transporter: "Transporter A",
         currentLat,
         currentLng
       })
@@ -63,69 +69,54 @@ export default function Transporter() {
         })
       });
 
-      // Stop when reached
+      // ARRIVED AT DESTINATION
       if (distance < 0.0005) {
         clearInterval(moveInterval);
         delete activeIntervals.current[order.id];
+
+        // Mark ready for verification popup
+        setVerifyOrder(order);
       }
     }, 3000);
 
     activeIntervals.current[order.id] = moveInterval;
   };
 
-  // VERIFY DELIVERY
-  const verifyDelivery = async () => {
-    const order = orders.find(
-      (o) => o.id.toString() === verifyId.trim()
-    );
+  // VERIFY POPUP CONFIRMATION
+  const confirmDelivery = async () => {
+    if (!verifyOrder) return;
 
-    if (!order) {
-      alert("Invalid Order ID");
+    if (verifyId.trim() !== verifyOrder.id.toString()) {
+      alert("Incorrect Order ID!");
       return;
-    }
-
-    if (order.status !== "In Transit") {
-      alert("Order must be In Transit");
-      return;
-    }
-
-    // Stop movement if still running
-    if (activeIntervals.current[order.id]) {
-      clearInterval(activeIntervals.current[order.id]);
-      delete activeIntervals.current[order.id];
     }
 
     await fetch("/api/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: order.id,
+        id: verifyOrder.id,
         status: "Delivered"
       })
     });
 
-    alert("Delivery Verified Successfully ✅");
+    alert("Delivery Completed Successfully ✅");
+
+    setVerifyOrder(null);
     setVerifyId("");
   };
 
   return (
     <div style={container}>
-      <h2 style={{ marginBottom: 20 }}>🚚 Transporter Dashboard</h2>
-
-      {orders.length === 0 && <p>No orders available</p>}
+      <h2>🚚 Transporter Dashboard</h2>
 
       {orders.map((order) => (
         <div key={order.id} style={card}>
-          {/* ORDER ID HIDDEN */}
-
           <p><b>Status:</b> {order.status}</p>
 
           <p>
-            <b>Route:</b>{" "}
-            {order.pickupLat || "Not set"},{" "}
-            {order.pickupLng || ""} →{" "}
-            {order.dropLat || "Not set"},{" "}
-            {order.dropLng || ""}
+            <b>Route:</b> {order.pickupLat}, {order.pickupLng} →{" "}
+            {order.dropLat}, {order.dropLng}
           </p>
 
           <p>
@@ -142,7 +133,7 @@ export default function Transporter() {
           )}
 
           {order.status === "In Transit" && (
-            <p style={{ color: "orange" }}>🚛 On the way...</p>
+            <p style={{ color: "orange" }}>🚛 Delivering...</p>
           )}
 
           {order.status === "Delivered" && (
@@ -151,22 +142,27 @@ export default function Transporter() {
         </div>
       ))}
 
-      {/* DELIVERY VERIFICATION SECTION */}
-      <div style={{ marginTop: 40 }}>
-        <h3>🔐 Verify Delivery</h3>
+      {/* VERIFICATION POPUP */}
+      {verifyOrder && (
+        <div style={popupOverlay}>
+          <div style={popup}>
+            <h3>🔐 Confirm Delivery</h3>
+            <p>Enter Order ID to confirm delivery:</p>
 
-        <input
-          type="text"
-          placeholder="Enter Order ID"
-          value={verifyId}
-          onChange={(e) => setVerifyId(e.target.value)}
-          style={input}
-        />
+            <input
+              type="text"
+              value={verifyId}
+              onChange={(e) => setVerifyId(e.target.value)}
+              style={input}
+              placeholder="Enter Order ID"
+            />
 
-        <button style={button} onClick={verifyDelivery}>
-          Verify
-        </button>
-      </div>
+            <button style={button} onClick={confirmDelivery}>
+              Confirm
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -192,12 +188,33 @@ const button = {
   border: "none",
   borderRadius: 6,
   cursor: "pointer",
-  marginRight: 10
+  marginTop: 10
 };
 
 const input = {
   padding: 8,
-  marginRight: 10,
   borderRadius: 6,
-  border: "1px solid #ccc"
+  border: "1px solid #ccc",
+  marginTop: 10,
+  width: "100%"
+};
+
+const popupOverlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.5)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center"
+};
+
+const popup = {
+  background: "white",
+  padding: 30,
+  borderRadius: 10,
+  width: 300,
+  textAlign: "center"
 };
