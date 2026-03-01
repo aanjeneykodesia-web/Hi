@@ -4,28 +4,42 @@ export default function Manufacturer() {
   const [orders, setOrders] = useState([]);
   const [currentLat, setCurrentLat] = useState(null);
   const [currentLng, setCurrentLng] = useState(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   // Fetch orders
-  const fetchOrders = () => {
-    fetch("/api/orders")
-      .then(res => res.json())
-      .then(data => setOrders(data));
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch("/api/orders");
+      const data = await res.json();
+      setOrders(data);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    }
   };
 
-  // Auto detect GPS location
+  // Detect GPS location (High Accuracy)
   const detectLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
       return;
     }
 
+    setLoadingLocation(true);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setCurrentLat(position.coords.latitude);
         setCurrentLng(position.coords.longitude);
+        setLoadingLocation(false);
       },
-      () => {
+      (error) => {
         alert("Please enable location permission");
+        setLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
@@ -35,38 +49,49 @@ export default function Manufacturer() {
     fetchOrders();
   }, []);
 
-  // Update pickup + approve order
+  // Approve order & update pickup location
   const approveOrder = async (id) => {
-    if (!currentLat || !currentLng) {
+    if (currentLat === null || currentLng === null) {
       alert("Location not detected yet");
       return;
     }
 
-    await fetch("/api/orders", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        status: "Approved",
-        pickupLat: currentLat,
-        pickupLng: currentLng
-      })
-    });
+    try {
+      await fetch("/api/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          status: "Approved",
+          pickupLat: currentLat,
+          pickupLng: currentLng
+        })
+      });
 
-    fetchOrders();
+      alert("Pickup location updated successfully ✅");
+      fetchOrders();
+    } catch (err) {
+      console.error("Error updating order:", err);
+      alert("Failed to update order");
+    }
   };
 
   return (
-    <div style={{ padding: "30px", fontFamily: "Arial" }}>
-      <h2>Manufacturer Dashboard</h2>
+    <div style={container}>
+      <h2>🏭 Manufacturer Dashboard</h2>
 
+      {/* LOCATION BOX */}
       <div style={locationBox}>
         <h4>📍 Your Current Pickup Location</h4>
+
         <p>
-          {currentLat
+          {loadingLocation
+            ? "Detecting location..."
+            : currentLat !== null
             ? `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`
-            : "Detecting location..."}
+            : "Location not detected"}
         </p>
+
         <button onClick={detectLocation} style={btnSmall}>
           Refresh Location
         </button>
@@ -74,14 +99,19 @@ export default function Manufacturer() {
 
       <h3 style={{ marginTop: "30px" }}>Orders</h3>
 
-      {orders.map(order => (
+      {orders.length === 0 && <p>No orders available</p>}
+
+      {orders.map((order) => (
         <div key={order.id} style={card}>
           <p><b>Shop:</b> {order.shopName}</p>
           <p><b>Product:</b> {order.product}</p>
           <p><b>Weight:</b> {order.weight} tons</p>
 
           <p>
-            <b>Drop:</b> {order.dropLat}, {order.dropLng}
+            <b>Drop:</b>{" "}
+            {order.dropLat && order.dropLng
+              ? `${order.dropLat}, ${order.dropLng}`
+              : "Not Set"}
           </p>
 
           <p>
@@ -94,7 +124,10 @@ export default function Manufacturer() {
           <p><b>Status:</b> {order.status}</p>
 
           {order.status === "Pending" && (
-            <button onClick={() => approveOrder(order.id)} style={btn}>
+            <button
+              onClick={() => approveOrder(order.id)}
+              style={btn}
+            >
               Approve & Set Pickup
             </button>
           )}
@@ -104,6 +137,15 @@ export default function Manufacturer() {
   );
 }
 
+/* STYLES */
+
+const container = {
+  padding: "30px",
+  fontFamily: "Arial",
+  background: "#f5f7fa",
+  minHeight: "100vh"
+};
+
 const locationBox = {
   background: "#e3f2fd",
   padding: "15px",
@@ -111,10 +153,11 @@ const locationBox = {
 };
 
 const card = {
-  background: "#f1f1f1",
+  background: "#ffffff",
   padding: "15px",
   marginBottom: "15px",
-  borderRadius: "8px"
+  borderRadius: "8px",
+  boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
 };
 
 const btn = {
@@ -123,7 +166,8 @@ const btn = {
   color: "white",
   border: "none",
   borderRadius: "5px",
-  marginTop: "10px"
+  marginTop: "10px",
+  cursor: "pointer"
 };
 
 const btnSmall = {
@@ -132,5 +176,6 @@ const btnSmall = {
   color: "white",
   border: "none",
   borderRadius: "5px",
-  marginTop: "5px"
+  marginTop: "5px",
+  cursor: "pointer"
 };
