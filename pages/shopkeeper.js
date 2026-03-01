@@ -9,8 +9,40 @@ export default function Shopkeeper() {
     dropLng: ""
   });
 
+  const [detecting, setDetecting] = useState(false);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // AUTO DETECT DROP LOCATION
+  const detectDropLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported");
+      return;
+    }
+
+    setDetecting(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setForm({
+          ...form,
+          dropLat: position.coords.latitude.toFixed(6),
+          dropLng: position.coords.longitude.toFixed(6)
+        });
+        setDetecting(false);
+      },
+      () => {
+        alert("Please enable location permission");
+        setDetecting(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   };
 
   const submitOrder = async () => {
@@ -24,8 +56,9 @@ export default function Shopkeeper() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        pickupLat: null,   // Manufacturer will update this
-        pickupLng: null
+        pickupLat: null,
+        pickupLng: null,
+        status: "Pending"
       })
     });
 
@@ -90,7 +123,14 @@ export default function Shopkeeper() {
           />
         </div>
 
-        <p style={{ fontSize: "13px", color: "#666", marginTop: "5px" }}>
+        <button
+          onClick={detectDropLocation}
+          style={locationButton}
+        >
+          {detecting ? "Detecting..." : "📍 Use My Current Location"}
+        </button>
+
+        <p style={{ fontSize: "13px", color: "#666", marginTop: "10px" }}>
           Pickup location will be updated by Manufacturer.
         </p>
 
@@ -101,6 +141,8 @@ export default function Shopkeeper() {
     </div>
   );
 }
+
+/* STYLES */
 
 const container = {
   minHeight: "100vh",
@@ -172,4 +214,16 @@ const button = {
   fontSize: "16px",
   fontWeight: "bold",
   cursor: "pointer"
+};
+
+const locationButton = {
+  width: "100%",
+  padding: "10px",
+  borderRadius: "10px",
+  border: "none",
+  background: "#2962ff",
+  color: "white",
+  fontSize: "14px",
+  cursor: "pointer",
+  marginTop: "5px"
 };
