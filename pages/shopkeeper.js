@@ -10,12 +10,14 @@ export default function Shopkeeper() {
   });
 
   const [detecting, setDetecting] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // AUTO DETECT DROP LOCATION
+  // AUTO DETECT LOCATION
   const detectDropLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
@@ -26,51 +28,89 @@ export default function Shopkeeper() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setForm({
-          ...form,
+        setForm((prev) => ({
+          ...prev,
           dropLat: position.coords.latitude.toFixed(6),
           dropLng: position.coords.longitude.toFixed(6)
-        });
+        }));
         setDetecting(false);
       },
       () => {
-        alert("Please enable location permission");
+        alert("Enable location permission");
         setDetecting(false);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
+      { enableHighAccuracy: true }
     );
   };
 
-  const submitOrder = async () => {
+  // GENERATE INVOICE FILE
+  const generateInvoice = (order) => {
+    const invoiceText = `
+SWIFTLOGIX INVOICE
+--------------------------------
+Invoice ID: INV-${order.id}
+Shop Name: ${order.shopName}
+Product: ${order.product}
+Weight: ${order.weight} tons
+Drop Location: ${order.dropLat}, ${order.dropLng}
+Status: Pending Admin Approval
+--------------------------------
+Generated On: ${new Date().toLocaleString()}
+`;
+
+    const blob = new Blob([invoiceText], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice_INV-${order.id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    window.URL.revokeObjectURL(url);
+  };
+
+  // FINAL SUBMIT
+  const confirmSubmit = async () => {
     if (!form.shopName || !form.product || !form.dropLat || !form.dropLng) {
       alert("Please fill all required fields");
       return;
     }
 
-    await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        pickupLat: null,
-        pickupLng: null,
-        status: "Pending"
-      })
-    });
+    try {
+      setLoading(true);
 
-    alert("Order Submitted Successfully 🚚");
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
 
-    setForm({
-      shopName: "",
-      product: "",
-      weight: "",
-      dropLat: "",
-      dropLng: ""
-    });
+      if (!res.ok) throw new Error("Server Error");
+
+      const data = await res.json();
+
+      generateInvoice(data);
+
+      alert("Order Submitted Successfully 🚚");
+
+      setForm({
+        shopName: "",
+        product: "",
+        weight: "",
+        dropLat: "",
+        dropLng: ""
+      });
+
+      setShowPopup(false);
+      setLoading(false);
+
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong");
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,47 +137,69 @@ export default function Shopkeeper() {
 
         <input
           name="weight"
-          placeholder="Weight (in tons)"
+          placeholder="Weight (tons)"
           value={form.weight}
           onChange={handleChange}
           style={input}
         />
 
-        <h3 style={sectionTitle}>Drop Location</h3>
+        <h3>Drop Location</h3>
 
         <div style={row}>
           <input
             name="dropLat"
-            placeholder="Drop Latitude"
+            placeholder="Latitude"
             value={form.dropLat}
             onChange={handleChange}
             style={halfInput}
           />
-
           <input
             name="dropLng"
-            placeholder="Drop Longitude"
+            placeholder="Longitude"
             value={form.dropLng}
             onChange={handleChange}
             style={halfInput}
           />
         </div>
 
-        <button
-          onClick={detectDropLocation}
-          style={locationButton}
-        >
-          {detecting ? "Detecting..." : "📍 Use My Current Location"}
+        <button onClick={detectDropLocation} style={locationButton}>
+          {detecting ? "Detecting..." : "📍 Use My Location"}
         </button>
 
-        <p style={{ fontSize: "13px", color: "#666", marginTop: "10px" }}>
-          Pickup location will be updated by Manufacturer.
-        </p>
-
-        <button onClick={submitOrder} style={button}>
+        <button
+          onClick={() => setShowPopup(true)}
+          style={button}
+        >
           Submit Order
         </button>
       </div>
+
+      {/* POPUP */}
+      {showPopup && (
+        <div style={overlay}>
+          <div style={popup}>
+            <h3>Confirm Order</h3>
+            <p>Invoice will be generated automatically.</p>
+
+            <div style={{ marginTop: "20px" }}>
+              <button
+                onClick={confirmSubmit}
+                style={confirmBtn}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Confirm"}
+              </button>
+
+              <button
+                onClick={() => setShowPopup(false)}
+                style={cancelBtn}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -163,21 +225,15 @@ const card = {
 };
 
 const title = {
-  margin: 0,
+  textAlign: "center",
   fontSize: "28px",
-  fontWeight: "bold",
-  textAlign: "center"
+  fontWeight: "bold"
 };
 
 const subtitle = {
   textAlign: "center",
-  marginBottom: "20px",
-  color: "#666"
-};
-
-const sectionTitle = {
-  marginTop: "20px",
-  fontSize: "16px"
+  color: "#666",
+  marginBottom: "20px"
 };
 
 const input = {
@@ -185,16 +241,14 @@ const input = {
   padding: "12px",
   marginBottom: "12px",
   borderRadius: "10px",
-  border: "1px solid #ddd",
-  fontSize: "14px"
+  border: "1px solid #ddd"
 };
 
 const halfInput = {
   width: "48%",
   padding: "12px",
   borderRadius: "10px",
-  border: "1px solid #ddd",
-  fontSize: "14px"
+  border: "1px solid #ddd"
 };
 
 const row = {
@@ -223,8 +277,44 @@ const locationButton = {
   border: "none",
   background: "#2962ff",
   color: "white",
-  fontSize: "14px",
-  cursor: "pointer",
-  marginTop: "5px"
+  marginTop: "10px"
 };
-            
+
+const overlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center"
+};
+
+const popup = {
+  background: "white",
+  padding: "25px",
+  borderRadius: "15px",
+  width: "300px",
+  textAlign: "center"
+};
+
+const confirmBtn = {
+  background: "#00c853",
+  color: "white",
+  border: "none",
+  padding: "10px 15px",
+  borderRadius: "8px",
+  marginRight: "10px",
+  cursor: "pointer"
+};
+
+const cancelBtn = {
+  background: "#ff5252",
+  color: "white",
+  border: "none",
+  padding: "10px 15px",
+  borderRadius: "8px",
+  cursor: "pointer"
+};
