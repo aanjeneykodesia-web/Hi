@@ -6,18 +6,24 @@ export default function Manufacturer() {
   const [currentLng, setCurrentLng] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
 
-  // Fetch orders
+  // Fetch ONLY admin approved orders
   const fetchOrders = async () => {
     try {
       const res = await fetch("/api/orders");
       const data = await res.json();
-      setOrders(data);
+
+      // 🔥 FILTER ONLY ADMIN APPROVED
+      const approvedOrders = data.filter(
+        (order) => order.adminApproved === true
+      );
+
+      setOrders(approvedOrders);
     } catch (err) {
       console.error("Error fetching orders:", err);
     }
   };
 
-  // Detect GPS location (High Accuracy)
+  // Detect GPS location
   const detectLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
@@ -32,7 +38,7 @@ export default function Manufacturer() {
         setCurrentLng(position.coords.longitude);
         setLoadingLocation(false);
       },
-      (error) => {
+      () => {
         alert("Please enable location permission");
         setLoadingLocation(false);
       },
@@ -49,7 +55,7 @@ export default function Manufacturer() {
     fetchOrders();
   }, []);
 
-  // Approve order & update pickup location
+  // Approve order & set pickup
   const approveOrder = async (id) => {
     if (currentLat === null || currentLng === null) {
       alert("Location not detected yet");
@@ -97,9 +103,11 @@ export default function Manufacturer() {
         </button>
       </div>
 
-      <h3 style={{ marginTop: "30px" }}>Orders</h3>
+      <h3 style={{ marginTop: "30px" }}>Admin Approved Orders</h3>
 
-      {orders.length === 0 && <p>No orders available</p>}
+      {orders.length === 0 && (
+        <p>No admin-approved orders available</p>
+      )}
 
       {orders.map((order) => (
         <div key={order.id} style={card}>
@@ -123,6 +131,7 @@ export default function Manufacturer() {
 
           <p><b>Status:</b> {order.status}</p>
 
+          {/* 🔥 Only allow manufacturer approval if still Pending */}
           {order.status === "Pending" && (
             <button
               onClick={() => approveOrder(order.id)}
@@ -130,6 +139,12 @@ export default function Manufacturer() {
             >
               Approve & Set Pickup
             </button>
+          )}
+
+          {order.status === "Approved" && (
+            <p style={{ color: "green", fontWeight: "bold" }}>
+              Pickup Assigned ✅
+            </p>
           )}
         </div>
       ))}
