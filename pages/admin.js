@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 
 export default function Admin() {
   const [orders, setOrders] = useState([]);
+  const router = useRouter();
 
   const fetchOrders = async () => {
-    try {
-      const res = await fetch("/api/orders");
-      const data = await res.json();
-      setOrders(data);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-    }
+    const res = await fetch("/api/orders");
+    const data = await res.json();
+    setOrders(data);
   };
 
   useEffect(() => {
@@ -23,20 +21,6 @@ export default function Admin() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id })
     });
-
-    fetchOrders();
-  };
-
-  const rejectOrder = async (id) => {
-    await fetch("/api/orders", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        status: "Rejected"
-      })
-    });
-
     fetchOrders();
   };
 
@@ -44,94 +28,59 @@ export default function Admin() {
     <div style={container}>
       <h2>🛠 Admin Dashboard</h2>
 
-      {orders.length === 0 && <p>No Orders Found</p>}
-
       {orders.map((order) => (
         <div key={order.id} style={card}>
           <p><b>Order ID:</b> {order.id}</p>
           <p><b>Shop:</b> {order.shopName}</p>
-          <p><b>Product:</b> {order.product}</p>
-          <p><b>Weight:</b> {order.weight} tons</p>
-          <p>
-            <b>Drop Location:</b> {order.dropLat}, {order.dropLng}
-          </p>
+          <p><b>Status:</b> {order.adminApproved ? "Approved" : "Pending"}</p>
 
-          <p>
-            <b>Status:</b>{" "}
-            <span
-              style={{
-                color:
-                  order.status === "Rejected"
-                    ? "red"
-                    : order.adminApproved
-                    ? "green"
-                    : "orange"
-              }}
-            >
-              {order.status === "Rejected"
-                ? "Rejected"
-                : order.adminApproved
-                ? "Approved"
-                : "Pending Approval"}
-            </span>
-          </p>
-
-          {/* Buttons */}
-          {!order.adminApproved && order.status !== "Rejected" && (
-            <div style={{ marginTop: "10px" }}>
+          <div style={{ marginTop: "10px" }}>
+            {!order.adminApproved && (
               <button
                 onClick={() => approveOrder(order.id)}
                 style={approveBtn}
               >
                 Approve
               </button>
+            )}
 
-              <button
-                onClick={() => rejectOrder(order.id)}
-                style={rejectBtn}
-              >
-                Reject
-              </button>
-            </div>
-          )}
+            <button
+              onClick={() => router.push(`/admin/${order.id}`)}
+              style={viewBtn}
+            >
+              View Details
+            </button>
+          </div>
         </div>
       ))}
     </div>
   );
 }
 
-/* STYLES */
-
-const container = {
-  padding: "30px",
-  fontFamily: "Arial",
-  background: "#f4f6f9",
-  minHeight: "100vh"
-};
-
+const container = { padding: "30px", fontFamily: "Arial" };
 const card = {
-  background: "#ffffff",
+  background: "#fff",
   padding: "20px",
   marginBottom: "15px",
   borderRadius: "10px",
-  boxShadow: "0 5px 15px rgba(0,0,0,0.05)"
+  boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
 };
 
 const approveBtn = {
-  padding: "8px 12px",
-  marginRight: "10px",
   background: "#00c853",
   color: "white",
   border: "none",
+  padding: "8px 12px",
   borderRadius: "6px",
+  marginRight: "10px",
   cursor: "pointer"
 };
 
-const rejectBtn = {
-  padding: "8px 12px",
-  background: "#ff5252",
+const viewBtn = {
+  background: "#2962ff",
   color: "white",
   border: "none",
+  padding: "8px 12px",
   borderRadius: "6px",
   cursor: "pointer"
 };
