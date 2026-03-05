@@ -1,4 +1,4 @@
-import { useRouter } from "next/router";
+  import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 export default function OrderDetails() {
@@ -19,13 +19,16 @@ export default function OrderDetails() {
     fetchOrder();
   }, [id]);
 
-  if (!order) return <p style={{ padding: "30px" }}>Loading...</p>;
+  if (!order) return <p style={{ padding: "30px" }}>Loading order details...</p>;
 
   return (
     <div style={container}>
-      <h2>📄 Order Full Details</h2>
+      <h2>📦 Order Full Details</h2>
 
       <div style={card}>
+
+        {/* BASIC DETAILS */}
+        <h3>Order Info</h3>
         <p><b>Order ID:</b> {order.id}</p>
         <p><b>Shop Name:</b> {order.shopName}</p>
         <p><b>Product:</b> {order.product}</p>
@@ -33,27 +36,56 @@ export default function OrderDetails() {
 
         <hr />
 
-        <p><b>Drop Location:</b> {order.dropLat}, {order.dropLng}</p>
-        <p><b>Pickup Location:</b> {order.pickupLat || "Not Set"}, {order.pickupLng || ""}</p>
+        {/* LOCATION DETAILS */}
+        <h3>Location Details</h3>
+        <p>
+          <b>Drop Location:</b>{" "}
+          {order.dropLat}, {order.dropLng}
+        </p>
+
+        <p>
+          <b>Pickup Location:</b>{" "}
+          {order.pickupLat
+            ? `${order.pickupLat}, ${order.pickupLng}`
+            : "Not Set Yet"}
+        </p>
 
         <hr />
 
-        <p><b>Status:</b> {order.status}</p>
-        <p><b>Admin Approved:</b> {order.adminApproved ? "Yes" : "No"}</p>
-        <p><b>Assigned Transporter:</b> {order.assignedTo || "Not Assigned"}</p>
+        {/* ORDER STATUS */}
+        <h3>Status</h3>
+        <p><b>Order Status:</b> {order.status}</p>
+        <p><b>Admin Approved:</b> {order.adminApproved ? "✅ Yes" : "❌ No"}</p>
 
-        <p><b>Live Location:</b> {order.currentLat || "Not Available"}, {order.currentLng || ""}</p>
+        <hr />
 
-        <button
-          onClick={() => router.back()}
-          style={backBtn}
-        >
+        {/* TRANSPORTER DETAILS */}
+        <h3>Transporter Details</h3>
+
+        <p>
+          <b>Accepted By:</b>{" "}
+          {order.assignedTo ? order.assignedTo : "Not Accepted Yet"}
+        </p>
+
+        <p>
+          <b>Current Truck Location:</b>{" "}
+          {order.currentLat
+            ? `${order.currentLat}, ${order.currentLng}`
+            : "Not Available"}
+        </p>
+
+        <hr />
+
+        <button onClick={() => router.back()} style={backBtn}>
           ⬅ Back
         </button>
+
       </div>
     </div>
   );
 }
+
+/* STYLES */
 
 const container = {
   padding: "30px",
@@ -66,12 +98,13 @@ const card = {
   background: "#fff",
   padding: "25px",
   borderRadius: "12px",
-  boxShadow: "0 5px 15px rgba(0,0,0,0.05)"
+  boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
+  maxWidth: "600px"
 };
 
 const backBtn = {
   marginTop: "20px",
-  padding: "8px 14px",
+  padding: "10px 16px",
   background: "#2962ff",
   color: "white",
   border: "none",
