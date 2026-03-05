@@ -132,3 +132,11 @@ const card = {
   width: "280px",
   boxShadow: "0 5px 15px rgba(0,0,0,0.1)"
 };
+const loginBtn = {
+  background: "#2962ff",
+  padding: "8px 15px",
+  borderRadius: "5px",
+  color: "white",
+  textDecoration: "none",
+  marginRight: "15px"
+};
