@@ -16,10 +16,7 @@ export default function Home() {
         <h2 style={{ margin: 0 }}>SwiftLogix</h2>
 
         <div>
-          <Link href="/manufacturer" style={navBtn}>Manufacturer</Link>
-          <Link href="/transporter" style={navBtn}>Transporter</Link>
-          <Link href="/admin" style={adminBtn}>Admin</Link>
-        <Link href="/shopkeeper" style={navBtn}>Shopkeeper</Link>
+          <Link href="/login" style={loginBtn}>Login</Link>
         </div>
       </header>
 
