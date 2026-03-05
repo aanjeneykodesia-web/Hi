@@ -2,70 +2,60 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Login() {
-
   const router = useRouter();
 
-  const [role, setRole] = useState("admin");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
 
-    const users = {
-      admin: "admin123",
-      manufacturer: "manu123",
-      transporter: "truck123",
-      shopkeeper: "shop123"
-    };
-
-    if (password === users[role]) {
-
-      if (role === "admin") router.push("/admin");
-      if (role === "manufacturer") router.push("/manufacturer");
-      if (role === "transporter") router.push("/transporter");
-      if (role === "shopkeeper") router.push("/shopkeeper");
-
-    } else {
-      alert("Incorrect password ❌");
+    // SIMPLE DEMO LOGIN
+    if (username === "admin" && password === "admin123") {
+      router.push("/admin");
+    }
+    else if (username === "manufacturer" && password === "man123") {
+      router.push("/manufacturer");
+    }
+    else if (username === "transporter" && password === "trans123") {
+      router.push("/transporter");
+    }
+    else if (username === "shopkeeper" && password === "shop123") {
+      router.push("/shopkeeper");
+    }
+    else {
+      alert("Invalid login credentials");
     }
   };
 
   return (
     <div style={container}>
-
       <div style={card}>
+        <h2 style={title}>SwiftLogix Login</h2>
 
-        <h1 style={title}>SwiftLogix</h1>
-        <p style={subtitle}>Login to Dashboard</p>
-
-        <label style={label}>Select Role</label>
-
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
+        <input
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           style={input}
-        >
-          <option value="admin">Admin</option>
-          <option value="manufacturer">Manufacturer</option>
-          <option value="transporter">Transporter</option>
-          <option value="shopkeeper">Shopkeeper</option>
-        </select>
-
-        <label style={label}>Password</label>
+        />
 
         <input
           type="password"
-          placeholder="Enter Password"
+          placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={input}
         />
 
-        <button onClick={handleLogin} style={button}>
+        <button onClick={handleLogin} style={btn}>
           Login
         </button>
 
-      </div>
+        <p style={{marginTop:"10px",fontSize:"12px",color:"#777"}}>
+          admin / admin123
+        </p>
 
+      </div>
     </div>
   );
 }
@@ -82,44 +72,31 @@ const container = {
 
 const card = {
   background: "white",
-  padding: "40px",
+  padding: "30px",
   borderRadius: "15px",
-  width: "350px",
-  boxShadow: "0 15px 40px rgba(0,0,0,0.3)"
+  width: "320px",
+  textAlign: "center",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
 };
 
 const title = {
-  textAlign: "center",
-  margin: 0
-};
-
-const subtitle = {
-  textAlign: "center",
-  marginBottom: "20px",
-  color: "#666"
-};
-
-const label = {
-  fontSize: "14px",
-  marginTop: "10px"
+  marginBottom: "20px"
 };
 
 const input = {
   width: "100%",
   padding: "10px",
-  marginTop: "5px",
-  borderRadius: "8px",
+  marginBottom: "12px",
+  borderRadius: "6px",
   border: "1px solid #ccc"
 };
 
-const button = {
+const btn = {
   width: "100%",
-  marginTop: "20px",
-  padding: "12px",
+  padding: "10px",
   background: "#00c853",
   color: "white",
   border: "none",
-  borderRadius: "10px",
-  fontSize: "16px",
+  borderRadius: "6px",
   cursor: "pointer"
 };
