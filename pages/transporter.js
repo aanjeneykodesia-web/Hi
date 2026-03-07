@@ -14,7 +14,23 @@ export default function Transporter() {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 3000);
+    const acceptOrder = async (order) => {
+
+  await fetch("/api/acceptOrder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      orderId: order.id,
+      transporterId: "T101",
+      transporterUsername: "RahulTransport"
+    })
+  });
+
+  alert("Order Accepted 🚚");
+
+};
     return () => clearInterval(interval);
   }, []);
 
