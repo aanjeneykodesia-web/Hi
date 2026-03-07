@@ -1,4 +1,4 @@
-  import { useRouter } from "next/router";
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 export default function OrderDetails() {
@@ -39,8 +39,7 @@ export default function OrderDetails() {
         {/* LOCATION DETAILS */}
         <h3>Location Details</h3>
         <p>
-          <b>Drop Location:</b>{" "}
-          {order.dropLat}, {order.dropLng}
+          <b>Drop Location:</b> {order.dropLat}, {order.dropLng}
         </p>
 
         <p>
@@ -64,7 +63,14 @@ export default function OrderDetails() {
 
         <p>
           <b>Accepted By:</b>{" "}
-          {order.assignedTo ? order.assignedTo : "Not Accepted Yet"}
+          {order.transporterUsername
+            ? order.transporterUsername
+            : "Not Accepted Yet"}
+        </p>
+
+        <p>
+          <b>Transporter ID:</b>{" "}
+          {order.assignedTo ? order.assignedTo : "Not Assigned"}
         </p>
 
         <p>
