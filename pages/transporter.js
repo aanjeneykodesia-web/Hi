@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 export default function Transporter() {
   const [orders, setOrders] = useState([]);
   const [verifyId, setVerifyId] = useState("");
-  const [verifyOrder, setVerifyOrder] = useState(null); // popup control
+  const [verifyOrder, setVerifyOrder] = useState(null);
   const activeIntervals = useRef({});
 
   const fetchOrders = async () => {
@@ -14,27 +14,28 @@ export default function Transporter() {
 
   useEffect(() => {
     fetchOrders();
-    const acceptOrder = async (order) => {
-
-  await fetch("/api/acceptOrder", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      orderId: order.id,
-      transporterId: "T101",
-      transporterUsername: "RahulTransport"
-    })
-  });
-
-  alert("Order Accepted 🚚");
-
-};
-    return () => clearInterval(interval);
   }, []);
 
-  // CHECK IF ANY ORDER IS ACTIVE
+  // ACCEPT ORDER
+  const acceptOrder = async (order) => {
+    await fetch("/api/orders", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: order.id,
+        status: "Accepted",
+        transporter: "T101",
+        transporterUsername: "RahulTransport"
+      })
+    });
+
+    alert("Order Accepted 🚚");
+    fetchOrders();
+  };
+
+  // CHECK ACTIVE DELIVERY
   const isOrderActive = () => {
     return orders.some((o) => o.status === "In Transit");
   };
@@ -85,20 +86,18 @@ export default function Transporter() {
         })
       });
 
-      // ARRIVED AT DESTINATION
       if (distance < 0.0005) {
         clearInterval(moveInterval);
         delete activeIntervals.current[order.id];
-
-        // Mark ready for verification popup
         setVerifyOrder(order);
       }
+
     }, 3000);
 
     activeIntervals.current[order.id] = moveInterval;
   };
 
-  // VERIFY POPUP CONFIRMATION
+  // CONFIRM DELIVERY
   const confirmDelivery = async () => {
     if (!verifyOrder) return;
 
@@ -120,6 +119,7 @@ export default function Transporter() {
 
     setVerifyOrder(null);
     setVerifyId("");
+    fetchOrders();
   };
 
   return (
@@ -128,6 +128,7 @@ export default function Transporter() {
 
       {orders.map((order) => (
         <div key={order.id} style={card}>
+
           <p><b>Status:</b> {order.status}</p>
 
           <p>
@@ -142,7 +143,15 @@ export default function Transporter() {
               : "Not started"}
           </p>
 
-          {order.status === "Approved" && (
+          {/* ACCEPT ORDER */}
+          {order.status === "Pending" && (
+            <button style={button} onClick={() => acceptOrder(order)}>
+              Accept Order
+            </button>
+          )}
+
+          {/* START DELIVERY */}
+          {order.status === "Accepted" && (
             <button style={button} onClick={() => startDelivery(order)}>
               Start Delivery
             </button>
@@ -155,14 +164,16 @@ export default function Transporter() {
           {order.status === "Delivered" && (
             <p style={{ color: "green" }}>✅ Delivered</p>
           )}
+
         </div>
       ))}
 
-      {/* VERIFICATION POPUP */}
+      {/* DELIVERY VERIFICATION POPUP */}
       {verifyOrder && (
         <div style={popupOverlay}>
           <div style={popup}>
             <h3>🔐 Confirm Delivery</h3>
+
             <p>Enter Order ID to confirm delivery:</p>
 
             <input
@@ -176,9 +187,11 @@ export default function Transporter() {
             <button style={button} onClick={confirmDelivery}>
               Confirm
             </button>
+
           </div>
         </div>
       )}
+
     </div>
   );
 }
