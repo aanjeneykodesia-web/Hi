@@ -35,13 +35,14 @@ export default function Transporter() {
     fetchOrders();
   };
 
-  // CHECK ACTIVE DELIVERY
+  // CHECK IF DELIVERY ALREADY RUNNING
   const isOrderActive = () => {
     return orders.some((o) => o.status === "In Transit");
   };
 
-  // START DELIVERY
+  // START DELIVERY SIMULATION
   const startDelivery = async (order) => {
+
     if (isOrderActive()) {
       alert("You can only deliver one order at a time!");
       return;
@@ -54,6 +55,7 @@ export default function Transporter() {
 
     let currentLat = parseFloat(order.pickupLat);
     let currentLng = parseFloat(order.pickupLng);
+
     const dropLat = parseFloat(order.dropLat);
     const dropLng = parseFloat(order.dropLng);
 
@@ -69,6 +71,7 @@ export default function Transporter() {
     });
 
     const moveInterval = setInterval(async () => {
+
       currentLat += (dropLat - currentLat) * 0.15;
       currentLng += (dropLng - currentLng) * 0.15;
 
@@ -97,8 +100,20 @@ export default function Transporter() {
     activeIntervals.current[order.id] = moveInterval;
   };
 
+  // OPEN GOOGLE MAPS + START DELIVERY
+  const openMapsAndStart = (order) => {
+
+    startDelivery(order);
+
+    const url =
+      `https://www.google.com/maps/dir/?api=1&destination=${order.dropLat},${order.dropLng}&travelmode=driving`;
+
+    window.open(url, "_blank");
+  };
+
   // CONFIRM DELIVERY
   const confirmDelivery = async () => {
+
     if (!verifyOrder) return;
 
     if (verifyId.trim() !== verifyOrder.id.toString()) {
@@ -132,8 +147,7 @@ export default function Transporter() {
           <p><b>Status:</b> {order.status}</p>
 
           <p>
-            <b>Route:</b> {order.pickupLat}, {order.pickupLng} →{" "}
-            {order.dropLat}, {order.dropLng}
+            <b>Route:</b> {order.pickupLat}, {order.pickupLng} → {order.dropLat}, {order.dropLng}
           </p>
 
           <p>
@@ -144,16 +158,16 @@ export default function Transporter() {
           </p>
 
           {/* ACCEPT ORDER */}
-          {order.status === "Pending" && (
+          {order.status === "Approved" && (
             <button style={button} onClick={() => acceptOrder(order)}>
               Accept Order
             </button>
           )}
 
-          {/* START DELIVERY */}
+          {/* OPEN GOOGLE MAPS */}
           {order.status === "Accepted" && (
-            <button style={button} onClick={() => startDelivery(order)}>
-              Start Delivery
+            <button style={button} onClick={() => openMapsAndStart(order)}>
+              Open Google Maps 🚚
             </button>
           )}
 
@@ -172,9 +186,10 @@ export default function Transporter() {
       {verifyOrder && (
         <div style={popupOverlay}>
           <div style={popup}>
+
             <h3>🔐 Confirm Delivery</h3>
 
-            <p>Enter Order ID to confirm delivery:</p>
+            <p>Enter Order ID to confirm delivery</p>
 
             <input
               type="text"
@@ -185,7 +200,7 @@ export default function Transporter() {
             />
 
             <button style={button} onClick={confirmDelivery}>
-              Confirm
+              Confirm Delivery
             </button>
 
           </div>
@@ -211,7 +226,7 @@ const card = {
 };
 
 const button = {
-  padding: "8px 15px",
+  padding: "10px 16px",
   background: "#111",
   color: "white",
   border: "none",
