@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+  import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Admin() {
@@ -13,6 +13,13 @@ export default function Admin() {
 
   useEffect(() => {
     fetchOrders();
+
+    // Refresh orders every 3 seconds to update truck location
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const approveOrder = async (id) => {
@@ -21,6 +28,7 @@ export default function Admin() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id })
     });
+
     fetchOrders();
   };
 
@@ -30,11 +38,24 @@ export default function Admin() {
 
       {orders.map((order) => (
         <div key={order.id} style={card}>
+
           <p><b>Order ID:</b> {order.id}</p>
           <p><b>Shop:</b> {order.shopName}</p>
-          <p><b>Status:</b> {order.adminApproved ? "Approved" : "Pending"}</p>
+
+          <p>
+            <b>Status:</b>{" "}
+            {order.adminApproved ? "Approved" : "Pending"}
+          </p>
+
+          <p>
+            <b>Truck Location:</b>{" "}
+            {order.currentLat
+              ? `${order.currentLat.toFixed(5)}, ${order.currentLng.toFixed(5)}`
+              : "Not started"}
+          </p>
 
           <div style={{ marginTop: "10px" }}>
+
             {!order.adminApproved && (
               <button
                 onClick={() => approveOrder(order.id)}
@@ -50,14 +71,33 @@ export default function Admin() {
             >
               View Details
             </button>
+
+            {/* TRACK TRUCK BUTTON */}
+            {order.currentLat && (
+              <a
+                href={`https://www.google.com/maps?q=${order.currentLat},${order.currentLng}`}
+                target="_blank"
+                style={trackBtn}
+              >
+                Track Truck 📍
+              </a>
+            )}
+
           </div>
+
         </div>
       ))}
     </div>
   );
 }
 
-const container = { padding: "30px", fontFamily: "Arial" };
+const container = {
+  padding: "30px",
+  fontFamily: "Arial",
+  background: "#f5f7fa",
+  minHeight: "100vh"
+};
+
 const card = {
   background: "#fff",
   padding: "20px",
@@ -82,5 +122,16 @@ const viewBtn = {
   border: "none",
   padding: "8px 12px",
   borderRadius: "6px",
+  cursor: "pointer",
+  marginRight: "10px"
+};
+
+const trackBtn = {
+  background: "#ff9800",
+  color: "white",
+  border: "none",
+  padding: "8px 12px",
+  borderRadius: "6px",
+  textDecoration: "none",
   cursor: "pointer"
 };
