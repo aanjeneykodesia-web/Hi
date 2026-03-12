@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 
 export default function Shopkeeper() {
+
+  const router = useRouter();
+
   const [form, setForm] = useState({
     shopName: "",
     product: "",
@@ -13,12 +17,29 @@ export default function Shopkeeper() {
   const [showPopup, setShowPopup] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // AUTO FILL PRODUCT FROM PRODUCTS PAGE
+  useEffect(() => {
+
+    const saved = localStorage.getItem("selectedProduct");
+
+    if (saved) {
+      const product = JSON.parse(saved);
+
+      setForm((prev) => ({
+        ...prev,
+        product: `${product.product} - ${product.brand} - ${product.pack}`
+      }));
+    }
+
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   // AUTO DETECT LOCATION
   const detectDropLocation = () => {
+
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
       return;
@@ -28,12 +49,15 @@ export default function Shopkeeper() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+
         setForm((prev) => ({
           ...prev,
           dropLat: position.coords.latitude.toFixed(6),
           dropLng: position.coords.longitude.toFixed(6)
         }));
+
         setDetecting(false);
+
       },
       () => {
         alert("Enable location permission");
@@ -43,8 +67,9 @@ export default function Shopkeeper() {
     );
   };
 
-  // GENERATE INVOICE FILE
+  // GENERATE INVOICE
   const generateInvoice = (order) => {
+
     const invoiceText = `
 SWIFTLOGIX INVOICE
 --------------------------------
@@ -73,12 +98,14 @@ Generated On: ${new Date().toLocaleString()}
 
   // FINAL SUBMIT
   const confirmSubmit = async () => {
+
     if (!form.shopName || !form.product || !form.dropLat || !form.dropLng) {
       alert("Please fill all required fields");
       return;
     }
 
     try {
+
       setLoading(true);
 
       const res = await fetch("/api/orders", {
@@ -86,8 +113,6 @@ Generated On: ${new Date().toLocaleString()}
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-
-      if (!res.ok) throw new Error("Server Error");
 
       const data = await res.json();
 
@@ -107,15 +132,19 @@ Generated On: ${new Date().toLocaleString()}
       setLoading(false);
 
     } catch (error) {
-      console.error(error);
+
       alert("Something went wrong");
       setLoading(false);
+
     }
+
   };
 
   return (
     <div style={container}>
+
       <div style={card}>
+
         <h1 style={title}>SwiftLogix</h1>
         <p style={subtitle}>Create Logistics Order</p>
 
@@ -127,6 +156,8 @@ Generated On: ${new Date().toLocaleString()}
           style={input}
         />
 
+        {/* PRODUCT FIELD */}
+
         <input
           name="product"
           placeholder="Product Type"
@@ -134,6 +165,13 @@ Generated On: ${new Date().toLocaleString()}
           onChange={handleChange}
           style={input}
         />
+
+        <button
+          onClick={() => router.push("/products")}
+          style={productBtn}
+        >
+          View Products 📦
+        </button>
 
         <input
           name="weight"
@@ -146,6 +184,7 @@ Generated On: ${new Date().toLocaleString()}
         <h3>Drop Location</h3>
 
         <div style={row}>
+
           <input
             name="dropLat"
             placeholder="Latitude"
@@ -153,6 +192,7 @@ Generated On: ${new Date().toLocaleString()}
             onChange={handleChange}
             style={halfInput}
           />
+
           <input
             name="dropLng"
             placeholder="Longitude"
@@ -160,6 +200,7 @@ Generated On: ${new Date().toLocaleString()}
             onChange={handleChange}
             style={halfInput}
           />
+
         </div>
 
         <button onClick={detectDropLocation} style={locationButton}>
@@ -172,16 +213,21 @@ Generated On: ${new Date().toLocaleString()}
         >
           Submit Order
         </button>
+
       </div>
 
       {/* POPUP */}
+
       {showPopup && (
         <div style={overlay}>
+
           <div style={popup}>
+
             <h3>Confirm Order</h3>
             <p>Invoice will be generated automatically.</p>
 
             <div style={{ marginTop: "20px" }}>
+
               <button
                 onClick={confirmSubmit}
                 style={confirmBtn}
@@ -196,10 +242,14 @@ Generated On: ${new Date().toLocaleString()}
               >
                 Cancel
               </button>
+
             </div>
+
           </div>
+
         </div>
       )}
+
     </div>
   );
 }
@@ -211,7 +261,7 @@ const container = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  background: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+  background: "linear-gradient(135deg,#0f2027,#203a43,#2c5364)",
   padding: "20px"
 };
 
@@ -278,6 +328,17 @@ const locationButton = {
   background: "#2962ff",
   color: "white",
   marginTop: "10px"
+};
+
+const productBtn = {
+  width: "100%",
+  padding: "10px",
+  borderRadius: "10px",
+  border: "none",
+  background: "#ff9800",
+  color: "white",
+  marginBottom: "10px",
+  cursor: "pointer"
 };
 
 const overlay = {
