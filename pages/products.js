@@ -1,8 +1,17 @@
 import { useRouter } from "next/router";
+import { useState, useEffect } from "react";
 
 export default function Products() {
 
   const router = useRouter();
+  const [cart, setCart] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("selectedProducts");
+    if (saved) {
+      setCart(JSON.parse(saved));
+    }
+  }, []);
 
   const products = [
     {
@@ -22,16 +31,28 @@ export default function Products() {
     }
   ];
 
-  const selectProduct = (product, brand, pack) => {
+  const addProduct = (product, brand, pack) => {
 
-    const selected = {
+    const newProduct = {
       product,
       brand,
-      pack
+      pack,
+      quantity: 1
     };
 
-    localStorage.setItem("selectedProduct", JSON.stringify(selected));
+    const updatedCart = [...cart, newProduct];
 
+    setCart(updatedCart);
+
+    localStorage.setItem(
+      "selectedProducts",
+      JSON.stringify(updatedCart)
+    );
+
+    alert("Product Added ✅");
+  };
+
+  const goBack = () => {
     router.push("/shopkeeper");
   };
 
@@ -46,22 +67,20 @@ export default function Products() {
 
           <h3>{p.name}</h3>
 
-          <p><b>Select Brand:</b></p>
-
           {p.brands.map((brand) => (
 
             <div key={brand}>
 
-              <p>{brand}</p>
+              <p><b>{brand}</b></p>
 
               {p.packs.map((pack) => (
 
                 <button
                   key={pack}
                   style={button}
-                  onClick={() => selectProduct(p.name, brand, pack)}
+                  onClick={() => addProduct(p.name, brand, pack)}
                 >
-                  {brand} - {pack}
+                  Add {brand} - {pack}
                 </button>
 
               ))}
@@ -73,6 +92,10 @@ export default function Products() {
         </div>
 
       ))}
+
+      <button style={doneBtn} onClick={goBack}>
+        Done ✔
+      </button>
 
     </div>
   );
@@ -98,5 +121,15 @@ const button = {
   background: "#2962ff",
   color: "white",
   borderRadius: "6px",
+  cursor: "pointer"
+};
+
+const doneBtn = {
+  marginTop: "20px",
+  padding: "12px 20px",
+  background: "#00c853",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
   cursor: "pointer"
 };
