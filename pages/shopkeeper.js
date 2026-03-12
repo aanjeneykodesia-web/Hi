@@ -1,41 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
 export default function Shopkeeper() {
 
   const router = useRouter();
 
-  const [shopName, setShopName] = useState("");
-  const [products, setProducts] = useState([
-    { name: "", quantity: "" }
-  ]);
+  const [form, setForm] = useState({
+    shopName: "",
+    product: "",
+    weight: "",
+    dropLat: "",
+    dropLng: ""
+  });
 
-  const [dropLat, setDropLat] = useState("");
-  const [dropLng, setDropLng] = useState("");
   const [detecting, setDetecting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // ADD PRODUCT
-  const addProduct = () => {
-    setProducts([...products, { name: "", quantity: "" }]);
-  };
+  const [products, setProducts] = useState([]);
 
-  // REMOVE PRODUCT
-  const removeProduct = (index) => {
-    const newProducts = [...products];
-    newProducts.splice(index, 1);
-    setProducts(newProducts);
-  };
+  // LOAD MULTIPLE PRODUCTS
+  useEffect(() => {
 
-  // UPDATE PRODUCT
-  const updateProduct = (index, field, value) => {
-    const newProducts = [...products];
-    newProducts[index][field] = value;
-    setProducts(newProducts);
+    const saved = localStorage.getItem("selectedProducts");
+
+    if (saved) {
+
+      const list = JSON.parse(saved);
+
+      setProducts(list);
+
+      const productString = list
+        .map(p => `${p.product} - ${p.brand} - ${p.pack}`)
+        .join(", ");
+
+      setForm(prev => ({
+        ...prev,
+        product: productString
+      }));
+    }
+
+  }, []);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   // AUTO LOCATION
-  const detectLocation = () => {
+  const detectDropLocation = () => {
 
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
@@ -46,8 +58,11 @@ export default function Shopkeeper() {
 
     navigator.geolocation.getCurrentPosition((pos) => {
 
-      setDropLat(pos.coords.latitude.toFixed(6));
-      setDropLng(pos.coords.longitude.toFixed(6));
+      setForm(prev => ({
+        ...prev,
+        dropLat: pos.coords.latitude.toFixed(6),
+        dropLng: pos.coords.longitude.toFixed(6)
+      }));
 
       setDetecting(false);
 
@@ -57,20 +72,21 @@ export default function Shopkeeper() {
   // GENERATE INVOICE
   const generateInvoice = (order) => {
 
-    let productList = "";
-
-    order.products.forEach((p, i) => {
-      productList += `${i + 1}. ${p.name} - Qty: ${p.quantity}\n`;
-    });
+    const productList = products
+      .map((p,i)=>`${i+1}. ${p.product} - ${p.brand} - ${p.pack}`)
+      .join("\n");
 
     const text = `
 SWIFTLOGIX INVOICE
-----------------------------
+-----------------------------
+Invoice ID: INV-${order.id}
 
 Shop: ${order.shopName}
 
 Products:
 ${productList}
+
+Weight: ${order.weight} tons
 
 Drop Location:
 ${order.dropLat}, ${order.dropLng}
@@ -80,31 +96,30 @@ Status: Pending Admin Approval
 Generated: ${new Date().toLocaleString()}
 `;
 
-    const blob = new Blob([text], { type: "text/plain" });
+    const blob = new Blob([text], { type:"text/plain" });
+
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
+
     a.href = url;
-    a.download = "invoice.txt";
+    a.download = `invoice-${order.id}.txt`;
     a.click();
   };
 
-  // SUBMIT ORDER
-  const submitOrder = async () => {
+  const confirmSubmit = async () => {
 
-    const body = {
-      shopName,
-      products,
-      dropLat,
-      dropLng
-    };
+    if (!form.shopName || !form.product) {
+      alert("Fill required fields");
+      return;
+    }
 
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
+    setLoading(true);
+
+    const res = await fetch("/api/orders",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json"},
+      body:JSON.stringify(form)
     });
 
     const data = await res.json();
@@ -113,146 +128,171 @@ Generated: ${new Date().toLocaleString()}
 
     alert("Order Created 🚚");
 
-    setShopName("");
-    setProducts([{ name: "", quantity: "" }]);
+    localStorage.removeItem("selectedProducts");
+
+    setLoading(false);
   };
 
   return (
+
     <div style={container}>
 
-      <h2>Shopkeeper Dashboard</h2>
+      <div style={card}>
 
-      <input
-        placeholder="Shop Name"
-        value={shopName}
-        onChange={(e) => setShopName(e.target.value)}
-        style={input}
-      />
+        <h1>SwiftLogix</h1>
 
-      <h3>Products</h3>
+        <input
+          name="shopName"
+          placeholder="Shop Name"
+          value={form.shopName}
+          onChange={handleChange}
+          style={input}
+        />
 
-      {products.map((p, index) => (
+        <button
+          onClick={()=>router.push("/products")}
+          style={productBtn}
+        >
+          Select Products 📦
+        </button>
 
-        <div key={index} style={row}>
+        <textarea
+          value={form.product}
+          readOnly
+          style={input}
+        />
 
-          <input
-            placeholder="Product Name"
-            value={p.name}
-            onChange={(e) =>
-              updateProduct(index, "name", e.target.value)
-            }
-            style={productInput}
-          />
+        <input
+          name="weight"
+          placeholder="Weight (tons)"
+          value={form.weight}
+          onChange={handleChange}
+          style={input}
+        />
 
-          <input
-            placeholder="Quantity"
-            value={p.quantity}
-            onChange={(e) =>
-              updateProduct(index, "quantity", e.target.value)
-            }
-            style={qtyInput}
-          />
+        <h3>Drop Location</h3>
 
-          <button onClick={() => removeProduct(index)}>
-            ❌
-          </button>
+        <input
+          name="dropLat"
+          placeholder="Latitude"
+          value={form.dropLat}
+          onChange={handleChange}
+          style={input}
+        />
 
-        </div>
+        <input
+          name="dropLng"
+          placeholder="Longitude"
+          value={form.dropLng}
+          onChange={handleChange}
+          style={input}
+        />
 
-      ))}
+        <button
+          onClick={detectDropLocation}
+          style={locationButton}
+        >
+          {detecting ? "Detecting..." : "📍 Use My Location"}
+        </button>
 
-      <button onClick={addProduct} style={addBtn}>
-        + Add Product
-      </button>
+        <button
+          onClick={()=>setShowPopup(true)}
+          style={button}
+        >
+          Submit Order
+        </button>
 
-      <h3>Drop Location</h3>
-
-      <input
-        placeholder="Latitude"
-        value={dropLat}
-        onChange={(e) => setDropLat(e.target.value)}
-        style={input}
-      />
-
-      <input
-        placeholder="Longitude"
-        value={dropLng}
-        onChange={(e) => setDropLng(e.target.value)}
-        style={input}
-      />
-
-      <button onClick={detectLocation}>
-        {detecting ? "Detecting..." : "Use My Location"}
-      </button>
-
-      <button
-        style={submitBtn}
-        onClick={() => setShowPopup(true)}
-      >
-        Submit Order
-      </button>
+      </div>
 
       {showPopup && (
-        <div style={popup}>
 
-          <h3>Confirm Order</h3>
+        <div style={overlay}>
 
-          <button onClick={submitOrder}>
-            Confirm
-          </button>
+          <div style={popup}>
 
-          <button onClick={() => setShowPopup(false)}>
-            Cancel
-          </button>
+            <h3>Confirm Order</h3>
+
+            <button
+              onClick={confirmSubmit}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Confirm"}
+            </button>
+
+            <button onClick={()=>setShowPopup(false)}>
+              Cancel
+            </button>
+
+          </div>
 
         </div>
+
       )}
 
     </div>
   );
 }
 
-/* STYLES */
-
-const container = {
-  padding: 40,
-  fontFamily: "Arial"
+const container={
+  minHeight:"100vh",
+  display:"flex",
+  justifyContent:"center",
+  alignItems:"center",
+  background:"#0f2027"
 };
 
-const input = {
-  display: "block",
-  padding: 10,
-  marginBottom: 10
+const card={
+  background:"white",
+  padding:"30px",
+  borderRadius:"20px",
+  width:"420px"
 };
 
-const row = {
-  display: "flex",
-  gap: 10,
-  marginBottom: 10
+const input={
+  width:"100%",
+  padding:"12px",
+  marginBottom:"12px"
 };
 
-const productInput = {
-  padding: 8
+const button={
+  width:"100%",
+  padding:"14px",
+  background:"#00c853",
+  color:"white",
+  border:"none"
 };
 
-const qtyInput = {
-  width: 80
+const locationButton={
+  width:"100%",
+  padding:"10px",
+  background:"#2962ff",
+  color:"white",
+  border:"none"
 };
 
-const addBtn = {
-  marginBottom: 20
+const productBtn={
+  width:"100%",
+  padding:"10px",
+  background:"#ff9800",
+  color:"white",
+  border:"none",
+  marginBottom:"10px"
 };
 
-const submitBtn = {
-  marginTop: 20,
-  padding: 10
+const overlay={
+  position:"fixed",
+  top:0,
+  left:0,
+  width:"100%",
+  height:"100%",
+  background:"rgba(0,0,0,0.6)",
+  display:"flex",
+  justifyContent:"center",
+  alignItems:"center"
 };
 
-const popup = {
-  position: "fixed",
-  top: "40%",
-  left: "40%",
-  background: "white",
-  padding: 20,
-  border: "1px solid #ccc"
+const popup={
+  background:"white",
+  padding:"20px",
+  borderRadius:"10px"
 };
