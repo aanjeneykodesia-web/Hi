@@ -1,44 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Shopkeeper() {
 
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    shopName: "",
-    product: "",
-    weight: "",
-    dropLat: "",
-    dropLng: ""
-  });
+  const [shopName, setShopName] = useState("");
+  const [products, setProducts] = useState([
+    { name: "", quantity: "" }
+  ]);
 
+  const [dropLat, setDropLat] = useState("");
+  const [dropLng, setDropLng] = useState("");
   const [detecting, setDetecting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  // AUTO FILL PRODUCT FROM PRODUCTS PAGE
-  useEffect(() => {
-
-    const saved = localStorage.getItem("selectedProduct");
-
-    if (saved) {
-      const product = JSON.parse(saved);
-
-      setForm((prev) => ({
-        ...prev,
-        product: `${product.product} - ${product.brand} - ${product.pack}`
-      }));
-    }
-
-  }, []);
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // ADD PRODUCT
+  const addProduct = () => {
+    setProducts([...products, { name: "", quantity: "" }]);
   };
 
-  // AUTO DETECT LOCATION
-  const detectDropLocation = () => {
+  // REMOVE PRODUCT
+  const removeProduct = (index) => {
+    const newProducts = [...products];
+    newProducts.splice(index, 1);
+    setProducts(newProducts);
+  };
+
+  // UPDATE PRODUCT
+  const updateProduct = (index, field, value) => {
+    const newProducts = [...products];
+    newProducts[index][field] = value;
+    setProducts(newProducts);
+  };
+
+  // AUTO LOCATION
+  const detectLocation = () => {
 
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
@@ -47,205 +44,166 @@ export default function Shopkeeper() {
 
     setDetecting(true);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+    navigator.geolocation.getCurrentPosition((pos) => {
 
-        setForm((prev) => ({
-          ...prev,
-          dropLat: position.coords.latitude.toFixed(6),
-          dropLng: position.coords.longitude.toFixed(6)
-        }));
+      setDropLat(pos.coords.latitude.toFixed(6));
+      setDropLng(pos.coords.longitude.toFixed(6));
 
-        setDetecting(false);
+      setDetecting(false);
 
-      },
-      () => {
-        alert("Enable location permission");
-        setDetecting(false);
-      },
-      { enableHighAccuracy: true }
-    );
+    });
   };
 
   // GENERATE INVOICE
   const generateInvoice = (order) => {
 
-    const invoiceText = `
+    let productList = "";
+
+    order.products.forEach((p, i) => {
+      productList += `${i + 1}. ${p.name} - Qty: ${p.quantity}\n`;
+    });
+
+    const text = `
 SWIFTLOGIX INVOICE
---------------------------------
-Invoice ID: INV-${order.id}
-Shop Name: ${order.shopName}
-Product: ${order.product}
-Weight: ${order.weight} tons
-Drop Location: ${order.dropLat}, ${order.dropLng}
+----------------------------
+
+Shop: ${order.shopName}
+
+Products:
+${productList}
+
+Drop Location:
+${order.dropLat}, ${order.dropLng}
+
 Status: Pending Admin Approval
---------------------------------
-Generated On: ${new Date().toLocaleString()}
+
+Generated: ${new Date().toLocaleString()}
 `;
 
-    const blob = new Blob([invoiceText], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Invoice_INV-${order.id}.txt`;
-    document.body.appendChild(a);
+    a.download = "invoice.txt";
     a.click();
-    document.body.removeChild(a);
-
-    window.URL.revokeObjectURL(url);
   };
 
-  // FINAL SUBMIT
-  const confirmSubmit = async () => {
+  // SUBMIT ORDER
+  const submitOrder = async () => {
 
-    if (!form.shopName || !form.product || !form.dropLat || !form.dropLng) {
-      alert("Please fill all required fields");
-      return;
-    }
+    const body = {
+      shopName,
+      products,
+      dropLat,
+      dropLng
+    };
 
-    try {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
 
-      setLoading(true);
+    const data = await res.json();
 
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
-      });
+    generateInvoice(data);
 
-      const data = await res.json();
+    alert("Order Created 🚚");
 
-      generateInvoice(data);
-
-      alert("Order Submitted Successfully 🚚");
-
-      setForm({
-        shopName: "",
-        product: "",
-        weight: "",
-        dropLat: "",
-        dropLng: ""
-      });
-
-      setShowPopup(false);
-      setLoading(false);
-
-    } catch (error) {
-
-      alert("Something went wrong");
-      setLoading(false);
-
-    }
-
+    setShopName("");
+    setProducts([{ name: "", quantity: "" }]);
   };
 
   return (
     <div style={container}>
 
-      <div style={card}>
+      <h2>Shopkeeper Dashboard</h2>
 
-        <h1 style={title}>SwiftLogix</h1>
-        <p style={subtitle}>Create Logistics Order</p>
+      <input
+        placeholder="Shop Name"
+        value={shopName}
+        onChange={(e) => setShopName(e.target.value)}
+        style={input}
+      />
 
-        <input
-          name="shopName"
-          placeholder="Shop Name"
-          value={form.shopName}
-          onChange={handleChange}
-          style={input}
-        />
+      <h3>Products</h3>
 
-        {/* PRODUCT FIELD */}
+      {products.map((p, index) => (
 
-        <input
-          name="product"
-          placeholder="Product Type"
-          value={form.product}
-          onChange={handleChange}
-          style={input}
-        />
-
-        <button
-          onClick={() => router.push("/products")}
-          style={productBtn}
-        >
-          View Products 📦
-        </button>
-
-        <input
-          name="weight"
-          placeholder="Weight (tons)"
-          value={form.weight}
-          onChange={handleChange}
-          style={input}
-        />
-
-        <h3>Drop Location</h3>
-
-        <div style={row}>
+        <div key={index} style={row}>
 
           <input
-            name="dropLat"
-            placeholder="Latitude"
-            value={form.dropLat}
-            onChange={handleChange}
-            style={halfInput}
+            placeholder="Product Name"
+            value={p.name}
+            onChange={(e) =>
+              updateProduct(index, "name", e.target.value)
+            }
+            style={productInput}
           />
 
           <input
-            name="dropLng"
-            placeholder="Longitude"
-            value={form.dropLng}
-            onChange={handleChange}
-            style={halfInput}
+            placeholder="Quantity"
+            value={p.quantity}
+            onChange={(e) =>
+              updateProduct(index, "quantity", e.target.value)
+            }
+            style={qtyInput}
           />
+
+          <button onClick={() => removeProduct(index)}>
+            ❌
+          </button>
 
         </div>
 
-        <button onClick={detectDropLocation} style={locationButton}>
-          {detecting ? "Detecting..." : "📍 Use My Location"}
-        </button>
+      ))}
 
-        <button
-          onClick={() => setShowPopup(true)}
-          style={button}
-        >
-          Submit Order
-        </button>
+      <button onClick={addProduct} style={addBtn}>
+        + Add Product
+      </button>
 
-      </div>
+      <h3>Drop Location</h3>
 
-      {/* POPUP */}
+      <input
+        placeholder="Latitude"
+        value={dropLat}
+        onChange={(e) => setDropLat(e.target.value)}
+        style={input}
+      />
+
+      <input
+        placeholder="Longitude"
+        value={dropLng}
+        onChange={(e) => setDropLng(e.target.value)}
+        style={input}
+      />
+
+      <button onClick={detectLocation}>
+        {detecting ? "Detecting..." : "Use My Location"}
+      </button>
+
+      <button
+        style={submitBtn}
+        onClick={() => setShowPopup(true)}
+      >
+        Submit Order
+      </button>
 
       {showPopup && (
-        <div style={overlay}>
+        <div style={popup}>
 
-          <div style={popup}>
+          <h3>Confirm Order</h3>
 
-            <h3>Confirm Order</h3>
-            <p>Invoice will be generated automatically.</p>
+          <button onClick={submitOrder}>
+            Confirm
+          </button>
 
-            <div style={{ marginTop: "20px" }}>
-
-              <button
-                onClick={confirmSubmit}
-                style={confirmBtn}
-                disabled={loading}
-              >
-                {loading ? "Processing..." : "Confirm"}
-              </button>
-
-              <button
-                onClick={() => setShowPopup(false)}
-                style={cancelBtn}
-              >
-                Cancel
-              </button>
-
-            </div>
-
-          </div>
+          <button onClick={() => setShowPopup(false)}>
+            Cancel
+          </button>
 
         </div>
       )}
@@ -257,125 +215,44 @@ Generated On: ${new Date().toLocaleString()}
 /* STYLES */
 
 const container = {
-  minHeight: "100vh",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  background: "linear-gradient(135deg,#0f2027,#203a43,#2c5364)",
-  padding: "20px"
-};
-
-const card = {
-  background: "white",
-  padding: "30px",
-  borderRadius: "20px",
-  width: "100%",
-  maxWidth: "420px",
-  boxShadow: "0 15px 40px rgba(0,0,0,0.2)"
-};
-
-const title = {
-  textAlign: "center",
-  fontSize: "28px",
-  fontWeight: "bold"
-};
-
-const subtitle = {
-  textAlign: "center",
-  color: "#666",
-  marginBottom: "20px"
+  padding: 40,
+  fontFamily: "Arial"
 };
 
 const input = {
-  width: "100%",
-  padding: "12px",
-  marginBottom: "12px",
-  borderRadius: "10px",
-  border: "1px solid #ddd"
-};
-
-const halfInput = {
-  width: "48%",
-  padding: "12px",
-  borderRadius: "10px",
-  border: "1px solid #ddd"
+  display: "block",
+  padding: 10,
+  marginBottom: 10
 };
 
 const row = {
   display: "flex",
-  justifyContent: "space-between",
-  marginBottom: "10px"
+  gap: 10,
+  marginBottom: 10
 };
 
-const button = {
-  width: "100%",
-  padding: "14px",
-  marginTop: "20px",
-  borderRadius: "12px",
-  border: "none",
-  background: "#00c853",
-  color: "white",
-  fontSize: "16px",
-  fontWeight: "bold",
-  cursor: "pointer"
+const productInput = {
+  padding: 8
 };
 
-const locationButton = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "10px",
-  border: "none",
-  background: "#2962ff",
-  color: "white",
-  marginTop: "10px"
+const qtyInput = {
+  width: 80
 };
 
-const productBtn = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "10px",
-  border: "none",
-  background: "#ff9800",
-  color: "white",
-  marginBottom: "10px",
-  cursor: "pointer"
+const addBtn = {
+  marginBottom: 20
 };
 
-const overlay = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.6)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center"
+const submitBtn = {
+  marginTop: 20,
+  padding: 10
 };
 
 const popup = {
+  position: "fixed",
+  top: "40%",
+  left: "40%",
   background: "white",
-  padding: "25px",
-  borderRadius: "15px",
-  width: "300px",
-  textAlign: "center"
-};
-
-const confirmBtn = {
-  background: "#00c853",
-  color: "white",
-  border: "none",
-  padding: "10px 15px",
-  borderRadius: "8px",
-  marginRight: "10px",
-  cursor: "pointer"
-};
-
-const cancelBtn = {
-  background: "#ff5252",
-  color: "white",
-  border: "none",
-  padding: "10px 15px",
-  borderRadius: "8px",
-  cursor: "pointer"
+  padding: 20,
+  border: "1px solid #ccc"
 };
