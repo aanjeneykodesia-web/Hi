@@ -16,10 +16,9 @@ export default function Shopkeeper() {
   const [detecting, setDetecting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [products, setProducts] = useState([]);
 
-  // LOAD MULTIPLE PRODUCTS
+  // LOAD PRODUCTS
   useEffect(() => {
 
     const saved = localStorage.getItem("selectedProducts");
@@ -32,7 +31,7 @@ export default function Shopkeeper() {
 
       const productString = list
         .map(p => `${p.product} - ${p.brand} - ${p.pack}`)
-        .join(", ");
+        .join("\n");
 
       setForm(prev => ({
         ...prev,
@@ -46,7 +45,7 @@ export default function Shopkeeper() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // AUTO LOCATION
+  // LOCATION
   const detectDropLocation = () => {
 
     if (!navigator.geolocation) {
@@ -69,7 +68,7 @@ export default function Shopkeeper() {
     });
   };
 
-  // GENERATE INVOICE
+  // INVOICE
   const generateInvoice = (order) => {
 
     const productList = products
@@ -90,8 +89,6 @@ Weight: ${order.weight} tons
 
 Drop Location:
 ${order.dropLat}, ${order.dropLng}
-
-Status: Pending Admin Approval
 
 Generated: ${new Date().toLocaleString()}
 `;
@@ -139,11 +136,12 @@ Generated: ${new Date().toLocaleString()}
 
       <div style={card}>
 
-        <h1>SwiftLogix</h1>
+        <h1 style={title}>SwiftLogix 🚚</h1>
+        <p style={subtitle}>Create Logistics Order</p>
 
         <input
           name="shopName"
-          placeholder="Shop Name"
+          placeholder="🏪 Shop Name"
           value={form.shopName}
           onChange={handleChange}
           style={input}
@@ -153,59 +151,68 @@ Generated: ${new Date().toLocaleString()}
           onClick={()=>router.push("/products")}
           style={productBtn}
         >
-          Select Products 📦
+          📦 Select Products
         </button>
 
         <textarea
           value={form.product}
           readOnly
-          style={input}
+          placeholder="Selected products will appear here"
+          style={textarea}
         />
 
         <input
           name="weight"
-          placeholder="Weight (tons)"
+          placeholder="⚖️ Total Weight (tons)"
           value={form.weight}
           onChange={handleChange}
           style={input}
         />
 
-        <h3>Drop Location</h3>
+        <h3 style={{marginTop:10}}>📍 Drop Location</h3>
 
-        <input
-          name="dropLat"
-          placeholder="Latitude"
-          value={form.dropLat}
-          onChange={handleChange}
-          style={input}
-        />
+        <div style={row}>
 
-        <input
-          name="dropLng"
-          placeholder="Longitude"
-          value={form.dropLng}
-          onChange={handleChange}
-          style={input}
-        />
+          <input
+            name="dropLat"
+            placeholder="Latitude"
+            value={form.dropLat}
+            onChange={handleChange}
+            style={halfInput}
+          />
+
+          <input
+            name="dropLng"
+            placeholder="Longitude"
+            value={form.dropLng}
+            onChange={handleChange}
+            style={halfInput}
+          />
+
+        </div>
 
         <button
           onClick={detectDropLocation}
           style={locationButton}
         >
-          {detecting ? "Detecting..." : "📍 Use My Location"}
+          {detecting ? "Detecting..." : "📍 Auto Detect Location"}
         </button>
 
         <button
           onClick={()=>setShowPopup(true)}
-          style={button}
+          style={submitBtn}
         >
-          Submit Order
+          🚚 Submit Order
+        </button>
+
+        <button
+          onClick={()=>router.push("/track")}
+          style={trackBtn}
+        >
+          📍 Track My Orders
         </button>
 
       </div>
-<button onClick={() => window.location.href="/track"}>
-Track My Orders 🚚
-</button>
 
       {showPopup && (
 
@@ -215,16 +222,26 @@ Track My Orders 🚚
 
             <h3>Confirm Order</h3>
 
-            <button
-              onClick={confirmSubmit}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Confirm"}
-            </button>
+            <p>Invoice will be generated automatically.</p>
 
-            <button onClick={()=>setShowPopup(false)}>
-              Cancel
-            </button>
+            <div style={{marginTop:20}}>
+
+              <button
+                onClick={confirmSubmit}
+                style={confirmBtn}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Confirm"}
+              </button>
+
+              <button
+                onClick={()=>setShowPopup(false)}
+                style={cancelBtn}
+              >
+                Cancel
+              </button>
+
+            </div>
 
           </div>
 
@@ -236,50 +253,110 @@ Track My Orders 🚚
   );
 }
 
+/* STYLES */
+
 const container={
   minHeight:"100vh",
   display:"flex",
   justifyContent:"center",
   alignItems:"center",
-  background:"#0f2027"
+  background:"linear-gradient(135deg,#141E30,#243B55)"
 };
 
 const card={
   background:"white",
-  padding:"30px",
+  padding:"35px",
   borderRadius:"20px",
-  width:"420px"
+  width:"430px",
+  boxShadow:"0 20px 40px rgba(0,0,0,0.2)"
+};
+
+const title={
+  textAlign:"center",
+  fontSize:"30px",
+  fontWeight:"bold"
+};
+
+const subtitle={
+  textAlign:"center",
+  color:"#666",
+  marginBottom:"20px"
 };
 
 const input={
   width:"100%",
   padding:"12px",
-  marginBottom:"12px"
+  marginBottom:"12px",
+  borderRadius:"10px",
+  border:"1px solid #ddd",
+  fontSize:"14px"
 };
 
-const button={
+const textarea={
   width:"100%",
-  padding:"14px",
-  background:"#00c853",
+  padding:"12px",
+  minHeight:"70px",
+  marginBottom:"12px",
+  borderRadius:"10px",
+  border:"1px solid #ddd"
+};
+
+const row={
+  display:"flex",
+  justifyContent:"space-between"
+};
+
+const halfInput={
+  width:"48%",
+  padding:"12px",
+  borderRadius:"10px",
+  border:"1px solid #ddd"
+};
+
+const productBtn={
+  width:"100%",
+  padding:"12px",
+  borderRadius:"10px",
+  border:"none",
+  background:"#ff9800",
   color:"white",
-  border:"none"
+  fontWeight:"bold",
+  marginBottom:"10px",
+  cursor:"pointer"
 };
 
 const locationButton={
   width:"100%",
   padding:"10px",
+  borderRadius:"10px",
+  border:"none",
   background:"#2962ff",
   color:"white",
-  border:"none"
+  marginTop:"10px",
+  cursor:"pointer"
 };
 
-const productBtn={
+const submitBtn={
   width:"100%",
-  padding:"10px",
-  background:"#ff9800",
-  color:"white",
+  padding:"14px",
+  marginTop:"15px",
+  borderRadius:"12px",
   border:"none",
-  marginBottom:"10px"
+  background:"#00c853",
+  color:"white",
+  fontWeight:"bold",
+  cursor:"pointer"
+};
+
+const trackBtn={
+  width:"100%",
+  padding:"12px",
+  marginTop:"10px",
+  borderRadius:"10px",
+  border:"none",
+  background:"#673ab7",
+  color:"white",
+  cursor:"pointer"
 };
 
 const overlay={
@@ -296,6 +373,27 @@ const overlay={
 
 const popup={
   background:"white",
-  padding:"20px",
-  borderRadius:"10px"
+  padding:"25px",
+  borderRadius:"15px",
+  width:"300px",
+  textAlign:"center"
+};
+
+const confirmBtn={
+  background:"#00c853",
+  color:"white",
+  border:"none",
+  padding:"10px 15px",
+  borderRadius:"8px",
+  marginRight:"10px",
+  cursor:"pointer"
+};
+
+const cancelBtn={
+  background:"#ff5252",
+  color:"white",
+  border:"none",
+  padding:"10px 15px",
+  borderRadius:"8px",
+  cursor:"pointer"
 };
