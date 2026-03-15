@@ -1,4 +1,4 @@
-  import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Admin() {
@@ -14,7 +14,6 @@ export default function Admin() {
   useEffect(() => {
     fetchOrders();
 
-    // Refresh orders every 3 seconds to update truck location
     const interval = setInterval(() => {
       fetchOrders();
     }, 3000);
@@ -34,11 +33,19 @@ export default function Admin() {
 
   return (
     <div style={container}>
-      <h2>🛠 Admin Dashboard</h2>
+      <div style={headerRow}>
+        <h2>🛠 Admin Dashboard</h2>
+
+        <button
+          onClick={() => router.push("/products")}
+          style={updateProductsBtn}
+        >
+          Update Products
+        </button>
+      </div>
 
       {orders.map((order) => (
         <div key={order.id} style={card}>
-
           <p><b>Order ID:</b> {order.id}</p>
           <p><b>Shop:</b> {order.shopName}</p>
 
@@ -55,7 +62,6 @@ export default function Admin() {
           </p>
 
           <div style={{ marginTop: "10px" }}>
-
             {!order.adminApproved && (
               <button
                 onClick={() => approveOrder(order.id)}
@@ -72,19 +78,17 @@ export default function Admin() {
               View Details
             </button>
 
-            {/* TRACK TRUCK BUTTON */}
             {order.currentLat && (
               <a
                 href={`https://www.google.com/maps?q=${order.currentLat},${order.currentLng}`}
                 target="_blank"
+                rel="noreferrer"
                 style={trackBtn}
               >
                 Track Truck 📍
               </a>
             )}
-
           </div>
-
         </div>
       ))}
     </div>
@@ -96,6 +100,23 @@ const container = {
   fontFamily: "Arial",
   background: "#f5f7fa",
   minHeight: "100vh"
+};
+
+const headerRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "20px"
+};
+
+const updateProductsBtn = {
+  background: "#111827",
+  color: "white",
+  border: "none",
+  padding: "10px 16px",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "bold"
 };
 
 const card = {
