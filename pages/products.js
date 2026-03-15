@@ -1,19 +1,10 @@
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Products() {
-
   const router = useRouter();
-  const [cart, setCart] = useState([]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("selectedProducts");
-    if (saved) {
-      setCart(JSON.parse(saved));
-    }
-  }, []);
-
-  const products = [
+  const defaultProducts = [
     {
       name: "Cooking Oil",
       brands: ["Fortune", "Saffola", "Dhara"],
@@ -31,105 +22,272 @@ export default function Products() {
     }
   ];
 
-  const addProduct = (product, brand, pack) => {
+  const [products, setProducts] = useState([]);
+  const [showAdminForm, setShowAdminForm] = useState(false);
 
-    const newProduct = {
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    brands: "",
+    packs: ""
+  });
+
+  useEffect(() => {
+    const savedProducts = localStorage.getItem("adminProducts");
+
+    if (savedProducts) {
+      setProducts([...defaultProducts, ...JSON.parse(savedProducts)]);
+    } else {
+      setProducts(defaultProducts);
+    }
+  }, []);
+
+  const selectProduct = (product, brand, pack) => {
+    const selected = {
       product,
       brand,
-      pack,
-      quantity: 1
+      pack
     };
 
-    const updatedCart = [...cart, newProduct];
-
-    setCart(updatedCart);
-
-    localStorage.setItem(
-      "selectedProducts",
-      JSON.stringify(updatedCart)
-    );
-
-    alert("Product Added ✅");
+    localStorage.setItem("selectedProduct", JSON.stringify(selected));
+    router.push("/shopkeeper");
   };
 
-  const goBack = () => {
-    router.push("/shopkeeper");
+  const handleAddProduct = () => {
+    if (!newProduct.name || !newProduct.brands || !newProduct.packs) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    const productToAdd = {
+      name: newProduct.name,
+      brands: newProduct.brands.split(",").map((item) => item.trim()),
+      packs: newProduct.packs.split(",").map((item) => item.trim())
+    };
+
+    const savedProducts = JSON.parse(localStorage.getItem("adminProducts")) || [];
+    const updatedAdminProducts = [...savedProducts, productToAdd];
+
+    localStorage.setItem("adminProducts", JSON.stringify(updatedAdminProducts));
+    setProducts([...defaultProducts, ...updatedAdminProducts]);
+
+    setNewProduct({
+      name: "",
+      brands: "",
+      packs: ""
+    });
+
+    alert("Product added successfully");
+    setShowAdminForm(false);
   };
 
   return (
     <div style={container}>
+      <div style={header}>
+        <h1 style={title}>📦 Product Management</h1>
+        <p style={subtitle}>Select products or add new products as admin</p>
+      </div>
 
-      <h2>📦 Available Products</h2>
+      <div style={topActions}>
+        <button
+          style={adminButton}
+          onClick={() => setShowAdminForm(!showAdminForm)}
+        >
+          {showAdminForm ? "Close Admin Panel" : "Admin Add Product"}
+        </button>
+      </div>
 
-      {products.map((p, index) => (
+      {showAdminForm && (
+        <div style={adminCard}>
+          <h2 style={adminTitle}>Add New Product</h2>
 
-        <div key={index} style={card}>
+          <input
+            type="text"
+            placeholder="Product Name"
+            value={newProduct.name}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, name: e.target.value })
+            }
+            style={input}
+          />
 
-          <h3>{p.name}</h3>
+          <input
+            type="text"
+            placeholder="Brands (comma separated)"
+            value={newProduct.brands}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, brands: e.target.value })
+            }
+            style={input}
+          />
 
-          {p.brands.map((brand) => (
+          <input
+            type="text"
+            placeholder="Pack Sizes (comma separated)"
+            value={newProduct.packs}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, packs: e.target.value })
+            }
+            style={input}
+          />
 
-            <div key={brand}>
-
-              <p><b>{brand}</b></p>
-
-              {p.packs.map((pack) => (
-
-                <button
-                  key={pack}
-                  style={button}
-                  onClick={() => addProduct(p.name, brand, pack)}
-                >
-                  Add {brand} - {pack}
-                </button>
-
-              ))}
-
-            </div>
-
-          ))}
-
+          <button style={saveButton} onClick={handleAddProduct}>
+            Save Product
+          </button>
         </div>
+      )}
 
-      ))}
+      <div style={grid}>
+        {products.map((p, index) => (
+          <div key={index} style={card}>
+            <h3 style={productName}>{p.name}</h3>
+            <p style={sectionLabel}>Select Brand and Pack</p>
 
-      <button style={doneBtn} onClick={goBack}>
-        Done ✔
-      </button>
+            {p.brands.map((brand) => (
+              <div key={brand} style={brandBlock}>
+                <h4 style={brandName}>{brand}</h4>
 
+                <div style={packWrap}>
+                  {p.packs.map((pack) => (
+                    <button
+                      key={pack}
+                      style={button}
+                      onClick={() => selectProduct(p.name, brand, pack)}
+                    >
+                      {brand} - {pack}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 const container = {
+  minHeight: "100vh",
   padding: "30px",
-  fontFamily: "Arial"
+  background: "linear-gradient(135deg, #eef2ff, #f8fafc)",
+  fontFamily: "Arial, sans-serif"
+};
+
+const header = {
+  textAlign: "center",
+  marginBottom: "30px"
+};
+
+const title = {
+  fontSize: "34px",
+  marginBottom: "10px",
+  color: "#111827"
+};
+
+const subtitle = {
+  fontSize: "16px",
+  color: "#6b7280"
+};
+
+const topActions = {
+  display: "flex",
+  justifyContent: "center",
+  marginBottom: "25px"
+};
+
+const adminButton = {
+  padding: "12px 20px",
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  fontSize: "15px"
+};
+
+const adminCard = {
+  maxWidth: "600px",
+  margin: "0 auto 30px auto",
+  background: "#ffffff",
+  padding: "25px",
+  borderRadius: "18px",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
+};
+
+const adminTitle = {
+  marginBottom: "20px",
+  color: "#111827"
+};
+
+const input = {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "15px",
+  borderRadius: "10px",
+  border: "1px solid #d1d5db",
+  fontSize: "14px"
+};
+
+const saveButton = {
+  padding: "12px 18px",
+  background: "#16a34a",
+  color: "#fff",
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer",
+  fontWeight: "bold"
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: "20px"
 };
 
 const card = {
-  background: "#fff",
-  padding: "20px",
-  marginBottom: "20px",
-  borderRadius: "10px",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+  background: "#ffffff",
+  padding: "22px",
+  borderRadius: "18px",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)"
+};
+
+const productName = {
+  fontSize: "22px",
+  marginBottom: "10px",
+  color: "#1f2937"
+};
+
+const sectionLabel = {
+  color: "#6b7280",
+  marginBottom: "12px"
+};
+
+const brandBlock = {
+  marginBottom: "18px",
+  padding: "12px",
+  background: "#f9fafb",
+  borderRadius: "12px"
+};
+
+const brandName = {
+  marginBottom: "10px",
+  color: "#374151"
+};
+
+const packWrap = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "10px"
 };
 
 const button = {
-  padding: "8px 12px",
-  margin: "5px",
+  padding: "10px 14px",
   border: "none",
-  background: "#2962ff",
+  background: "#2563eb",
   color: "white",
-  borderRadius: "6px",
-  cursor: "pointer"
-};
-
-const doneBtn = {
-  marginTop: "20px",
-  padding: "12px 20px",
-  background: "#00c853",
-  color: "white",
-  border: "none",
   borderRadius: "8px",
-  cursor: "pointer"
+  cursor: "pointer",
+  fontSize: "14px",
+  fontWeight: "bold"
 };
