@@ -24,6 +24,7 @@ export default function Products() {
 
   const [products, setProducts] = useState([]);
   const [showAdminForm, setShowAdminForm] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -39,16 +40,28 @@ export default function Products() {
     } else {
       setProducts(defaultProducts);
     }
+
+    const savedSelected = localStorage.getItem("selectedProducts");
+    if (savedSelected) {
+      setSelectedProducts(JSON.parse(savedSelected));
+    }
   }, []);
 
-  const selectProduct = (product, brand, pack) => {
+  const addSelectedProduct = (product, brand, pack) => {
     const selected = {
       product,
       brand,
       pack
     };
 
-    localStorage.setItem("selectedProduct", JSON.stringify(selected));
+    const updated = [...selectedProducts, selected];
+    setSelectedProducts(updated);
+    localStorage.setItem("selectedProducts", JSON.stringify(updated));
+
+    alert(`${product} - ${brand} - ${pack} added`);
+  };
+
+  const goToShopkeeper = () => {
     router.push("/shopkeeper");
   };
 
@@ -80,11 +93,16 @@ export default function Products() {
     setShowAdminForm(false);
   };
 
+  const clearSelectedProducts = () => {
+    setSelectedProducts([]);
+    localStorage.removeItem("selectedProducts");
+  };
+
   return (
     <div style={container}>
       <div style={header}>
         <h1 style={title}>📦 Product Management</h1>
-        <p style={subtitle}>Select products or add new products as admin</p>
+        <p style={subtitle}>Select multiple products or add new products as admin</p>
       </div>
 
       <div style={topActions}>
@@ -93,6 +111,14 @@ export default function Products() {
           onClick={() => setShowAdminForm(!showAdminForm)}
         >
           {showAdminForm ? "Close Admin Panel" : "Admin Add Product"}
+        </button>
+
+        <button style={goButton} onClick={goToShopkeeper}>
+          Go To Shopkeeper ({selectedProducts.length})
+        </button>
+
+        <button style={clearButton} onClick={clearSelectedProducts}>
+          Clear Selected
         </button>
       </div>
 
@@ -136,6 +162,19 @@ export default function Products() {
         </div>
       )}
 
+      <div style={selectedBox}>
+        <h3>Selected Products</h3>
+        {selectedProducts.length === 0 ? (
+          <p>No product selected yet.</p>
+        ) : (
+          selectedProducts.map((item, index) => (
+            <div key={index} style={selectedItem}>
+              {item.product} - {item.brand} - {item.pack}
+            </div>
+          ))
+        )}
+      </div>
+
       <div style={grid}>
         {products.map((p, index) => (
           <div key={index} style={card}>
@@ -151,7 +190,7 @@ export default function Products() {
                     <button
                       key={pack}
                       style={button}
-                      onClick={() => selectProduct(p.name, brand, pack)}
+                      onClick={() => addSelectedProduct(p.name, brand, pack)}
                     >
                       {brand} - {pack}
                     </button>
@@ -192,6 +231,8 @@ const subtitle = {
 const topActions = {
   display: "flex",
   justifyContent: "center",
+  gap: "12px",
+  flexWrap: "wrap",
   marginBottom: "25px"
 };
 
@@ -204,6 +245,44 @@ const adminButton = {
   cursor: "pointer",
   fontWeight: "bold",
   fontSize: "15px"
+};
+
+const goButton = {
+  padding: "12px 20px",
+  background: "#2563eb",
+  color: "#fff",
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  fontSize: "15px"
+};
+
+const clearButton = {
+  padding: "12px 20px",
+  background: "#dc2626",
+  color: "#fff",
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  fontSize: "15px"
+};
+
+const selectedBox = {
+  maxWidth: "900px",
+  margin: "0 auto 30px auto",
+  background: "#ffffff",
+  padding: "20px",
+  borderRadius: "16px",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.06)"
+};
+
+const selectedItem = {
+  padding: "10px 12px",
+  background: "#f3f4f6",
+  borderRadius: "8px",
+  marginBottom: "8px"
 };
 
 const adminCard = {
