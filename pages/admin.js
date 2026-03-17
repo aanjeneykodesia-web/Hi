@@ -43,6 +43,23 @@ export default function Admin() {
           Update Products
         </button>
       </div>
+  <button
+  onClick={() => {
+    localStorage.setItem("role", "admin");
+    alert("You are now Admin ✅");
+    window.location.reload();
+  }}
+  style={{
+    padding: "10px 15px",
+    background: "black",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    marginBottom: "10px"
+  }}
+>
+  Enable Admin Mode
+</button>
 
       {orders.map((order) => (
         <div key={order.id} style={card}>
