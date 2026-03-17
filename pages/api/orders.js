@@ -11,7 +11,7 @@ export default function handler(req, res) {
       id: Date.now(),
       shopName: req.body.shopName,
       product: req.body.product,
-      weight: req.body.weight,
+      Mobno: req.body.Mobno,
       dropLat: req.body.dropLat,
       dropLng: req.body.dropLng,
       pickupLat: req.body.pickupLat || null,
