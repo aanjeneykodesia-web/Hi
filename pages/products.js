@@ -23,8 +23,9 @@ export default function Products() {
   ];
 
   const [products, setProducts] = useState([]);
-  const [showAdminForm, setShowAdminForm] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [showAdminForm, setShowAdminForm] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -33,6 +34,9 @@ export default function Products() {
   });
 
   useEffect(() => {
+    const role = localStorage.getItem("role");
+    setIsAdmin(role === "admin");
+
     const savedProducts = localStorage.getItem("adminProducts");
 
     if (savedProducts) {
@@ -47,12 +51,9 @@ export default function Products() {
     }
   }, []);
 
+  // ✅ Add product to order
   const addSelectedProduct = (product, brand, pack) => {
-    const selected = {
-      product,
-      brand,
-      pack
-    };
+    const selected = { product, brand, pack };
 
     const updated = [...selectedProducts, selected];
     setSelectedProducts(updated);
@@ -65,6 +66,7 @@ export default function Products() {
     router.push("/shopkeeper");
   };
 
+  // ✅ Add new product (Admin only)
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.brands || !newProduct.packs) {
       alert("Please fill all fields");
@@ -73,24 +75,72 @@ export default function Products() {
 
     const productToAdd = {
       name: newProduct.name,
-      brands: newProduct.brands.split(",").map((item) => item.trim()),
-      packs: newProduct.packs.split(",").map((item) => item.trim())
+      brands: newProduct.brands.split(",").map((b) => b.trim()),
+      packs: newProduct.packs.split(",").map((p) => p.trim())
     };
 
-    const savedProducts = JSON.parse(localStorage.getItem("adminProducts")) || [];
-    const updatedAdminProducts = [...savedProducts, productToAdd];
+    const saved = JSON.parse(localStorage.getItem("adminProducts")) || [];
+    const updated = [...saved, productToAdd];
 
-    localStorage.setItem("adminProducts", JSON.stringify(updatedAdminProducts));
-    setProducts([...defaultProducts, ...updatedAdminProducts]);
+    localStorage.setItem("adminProducts", JSON.stringify(updated));
+    setProducts([...defaultProducts, ...updated]);
 
-    setNewProduct({
-      name: "",
-      brands: "",
-      packs: ""
-    });
+    setNewProduct({ name: "", brands: "", packs: "" });
+    setShowAdminForm(false);
 
     alert("Product added successfully");
-    setShowAdminForm(false);
+  };
+
+  // ✅ Delete product
+  const handleDeleteProduct = (index) => {
+    if (!confirm("Delete this product?")) return;
+
+    const defaultLength = defaultProducts.length;
+
+    if (index < defaultLength) {
+      alert("Default products cannot be deleted");
+      return;
+    }
+
+    const adminProducts =
+      JSON.parse(localStorage.getItem("adminProducts")) || [];
+
+    const updated = adminProducts.filter(
+      (_, i) => i !== index - defaultLength
+    );
+
+    localStorage.setItem("adminProducts", JSON.stringify(updated));
+    setProducts([...defaultProducts, ...updated]);
+  };
+
+  // ✅ Edit product
+  const handleEditProduct = (index) => {
+    const defaultLength = defaultProducts.length;
+
+    if (index < defaultLength) {
+      alert("Default products cannot be edited");
+      return;
+    }
+
+    const adminProducts =
+      JSON.parse(localStorage.getItem("adminProducts")) || [];
+
+    const product = adminProducts[index - defaultLength];
+
+    const name = prompt("Product name", product.name);
+    const brands = prompt("Brands (comma separated)", product.brands.join(", "));
+    const packs = prompt("Packs (comma separated)", product.packs.join(", "));
+
+    if (!name || !brands || !packs) return;
+
+    adminProducts[index - defaultLength] = {
+      name,
+      brands: brands.split(",").map((b) => b.trim()),
+      packs: packs.split(",").map((p) => p.trim())
+    };
+
+    localStorage.setItem("adminProducts", JSON.stringify(adminProducts));
+    setProducts([...defaultProducts, ...adminProducts]);
   };
 
   const clearSelectedProducts = () => {
@@ -102,16 +152,18 @@ export default function Products() {
     <div style={container}>
       <div style={header}>
         <h1 style={title}>📦 Product Management</h1>
-        <p style={subtitle}>Select multiple products or add new products as admin</p>
+        <p style={subtitle}>Select multiple products</p>
       </div>
 
       <div style={topActions}>
-        <button
-          style={adminButton}
-          onClick={() => setShowAdminForm(!showAdminForm)}
-        >
-          {showAdminForm ? "Close Admin Panel" : "Admin Add Product"}
-        </button>
+        {isAdmin && (
+          <button
+            style={adminButton}
+            onClick={() => setShowAdminForm(!showAdminForm)}
+          >
+            {showAdminForm ? "Close Admin Panel" : "Admin Add Product"}
+          </button>
+        )}
 
         <button style={goButton} onClick={goToShopkeeper}>
           Go To Shopkeeper ({selectedProducts.length})
@@ -122,12 +174,11 @@ export default function Products() {
         </button>
       </div>
 
-      {showAdminForm && (
+      {showAdminForm && isAdmin && (
         <div style={adminCard}>
-          <h2 style={adminTitle}>Add New Product</h2>
+          <h2>Add New Product</h2>
 
           <input
-            type="text"
             placeholder="Product Name"
             value={newProduct.name}
             onChange={(e) =>
@@ -137,7 +188,6 @@ export default function Products() {
           />
 
           <input
-            type="text"
             placeholder="Brands (comma separated)"
             value={newProduct.brands}
             onChange={(e) =>
@@ -147,8 +197,7 @@ export default function Products() {
           />
 
           <input
-            type="text"
-            placeholder="Pack Sizes (comma separated)"
+            placeholder="Packs (comma separated)"
             value={newProduct.packs}
             onChange={(e) =>
               setNewProduct({ ...newProduct, packs: e.target.value })
@@ -165,10 +214,10 @@ export default function Products() {
       <div style={selectedBox}>
         <h3>Selected Products</h3>
         {selectedProducts.length === 0 ? (
-          <p>No product selected yet.</p>
+          <p>No products selected</p>
         ) : (
-          selectedProducts.map((item, index) => (
-            <div key={index} style={selectedItem}>
+          selectedProducts.map((item, i) => (
+            <div key={i} style={selectedItem}>
               {item.product} - {item.brand} - {item.pack}
             </div>
           ))
@@ -178,24 +227,41 @@ export default function Products() {
       <div style={grid}>
         {products.map((p, index) => (
           <div key={index} style={card}>
-            <h3 style={productName}>{p.name}</h3>
-            <p style={sectionLabel}>Select Brand and Pack</p>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <h3>{p.name}</h3>
+
+              {isAdmin && (
+                <div>
+                  <button
+                    style={editBtn}
+                    onClick={() => handleEditProduct(index)}
+                  >
+                    ✏️
+                  </button>
+
+                  <button
+                    style={deleteBtn}
+                    onClick={() => handleDeleteProduct(index)}
+                  >
+                    ❌
+                  </button>
+                </div>
+              )}
+            </div>
 
             {p.brands.map((brand) => (
-              <div key={brand} style={brandBlock}>
-                <h4 style={brandName}>{brand}</h4>
+              <div key={brand}>
+                <h4>{brand}</h4>
 
-                <div style={packWrap}>
-                  {p.packs.map((pack) => (
-                    <button
-                      key={pack}
-                      style={button}
-                      onClick={() => addSelectedProduct(p.name, brand, pack)}
-                    >
-                      {brand} - {pack}
-                    </button>
-                  ))}
-                </div>
+                {p.packs.map((pack) => (
+                  <button
+                    key={pack}
+                    style={button}
+                    onClick={() => addSelectedProduct(p.name, brand, pack)}
+                  >
+                    {brand} - {pack}
+                  </button>
+                ))}
               </div>
             ))}
           </div>
@@ -205,168 +271,42 @@ export default function Products() {
   );
 }
 
-const container = {
-  minHeight: "100vh",
-  padding: "30px",
-  background: "linear-gradient(135deg, #eef2ff, #f8fafc)",
-  fontFamily: "Arial, sans-serif"
-};
+/* ✅ Styles */
 
-const header = {
-  textAlign: "center",
-  marginBottom: "30px"
-};
-
-const title = {
-  fontSize: "34px",
-  marginBottom: "10px",
-  color: "#111827"
-};
-
-const subtitle = {
-  fontSize: "16px",
-  color: "#6b7280"
-};
+const container = { padding: "30px" };
+const header = { textAlign: "center", marginBottom: "20px" };
+const title = { fontSize: "30px" };
+const subtitle = { color: "gray" };
 
 const topActions = {
   display: "flex",
+  gap: "10px",
   justifyContent: "center",
-  gap: "12px",
-  flexWrap: "wrap",
-  marginBottom: "25px"
-};
-
-const adminButton = {
-  padding: "12px 20px",
-  background: "#111827",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontSize: "15px"
-};
-
-const goButton = {
-  padding: "12px 20px",
-  background: "#2563eb",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontSize: "15px"
-};
-
-const clearButton = {
-  padding: "12px 20px",
-  background: "#dc2626",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontSize: "15px"
-};
-
-const selectedBox = {
-  maxWidth: "900px",
-  margin: "0 auto 30px auto",
-  background: "#ffffff",
-  padding: "20px",
-  borderRadius: "16px",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.06)"
-};
-
-const selectedItem = {
-  padding: "10px 12px",
-  background: "#f3f4f6",
-  borderRadius: "8px",
-  marginBottom: "8px"
-};
-
-const adminCard = {
-  maxWidth: "600px",
-  margin: "0 auto 30px auto",
-  background: "#ffffff",
-  padding: "25px",
-  borderRadius: "18px",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
-};
-
-const adminTitle = {
   marginBottom: "20px",
-  color: "#111827"
+  flexWrap: "wrap"
 };
 
-const input = {
-  width: "100%",
-  padding: "12px",
-  marginBottom: "15px",
-  borderRadius: "10px",
-  border: "1px solid #d1d5db",
-  fontSize: "14px"
-};
+const adminButton = { padding: "10px", background: "black", color: "white" };
+const goButton = { padding: "10px", background: "blue", color: "white" };
+const clearButton = { padding: "10px", background: "red", color: "white" };
 
-const saveButton = {
-  padding: "12px 18px",
-  background: "#16a34a",
-  color: "#fff",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer",
-  fontWeight: "bold"
-};
+const adminCard = { background: "white", padding: "20px", marginBottom: "20px" };
+const input = { width: "100%", marginBottom: "10px", padding: "10px" };
+const saveButton = { background: "green", color: "white", padding: "10px" };
 
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  gap: "20px"
-};
+const selectedBox = { background: "#eee", padding: "15px", marginBottom: "20px" };
+const selectedItem = { padding: "5px" };
 
-const card = {
-  background: "#ffffff",
-  padding: "22px",
-  borderRadius: "18px",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.06)"
-};
-
-const productName = {
-  fontSize: "22px",
-  marginBottom: "10px",
-  color: "#1f2937"
-};
-
-const sectionLabel = {
-  color: "#6b7280",
-  marginBottom: "12px"
-};
-
-const brandBlock = {
-  marginBottom: "18px",
-  padding: "12px",
-  background: "#f9fafb",
-  borderRadius: "12px"
-};
-
-const brandName = {
-  marginBottom: "10px",
-  color: "#374151"
-};
-
-const packWrap = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "10px"
-};
+const grid = { display: "grid", gap: "15px" };
+const card = { padding: "15px", background: "#fff" };
 
 const button = {
-  padding: "10px 14px",
-  border: "none",
+  margin: "5px",
+  padding: "8px",
   background: "#2563eb",
   color: "white",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "14px",
-  fontWeight: "bold"
+  border: "none"
 };
+
+const editBtn = { marginRight: "5px", background: "orange", color: "white" };
+const deleteBtn = { background: "red", color: "white" };
