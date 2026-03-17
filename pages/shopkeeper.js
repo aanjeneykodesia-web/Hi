@@ -8,7 +8,7 @@ export default function Shopkeeper() {
   const [form, setForm] = useState({
     shopName: "",
     product: "",
-    weight: "",
+    Mobno: "",
     dropLat: "",
     dropLng: ""
   });
