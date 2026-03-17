@@ -162,9 +162,9 @@ Generated: ${new Date().toLocaleString()}
         />
 
         <input
-          name="weight"
-          placeholder="⚖️ Total Weight (tons)"
-          value={form.weight}
+          name="Mobno"
+          placeholder="Mobno"
+          value={form.Mobno}
           onChange={handleChange}
           style={input}
         />
