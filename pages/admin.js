@@ -60,7 +60,24 @@ export default function Admin() {
 >
   Enable Admin Mode
 </button>
-
+<button
+  onClick={() => {
+    localStorage.setItem("role", "user");
+    alert("Admin mode disabled ❌");
+    window.location.reload();
+  }}
+  style={{
+    padding: "10px 15px",
+    background: "#dc2626",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    marginLeft: "10px"
+  }}
+>
+  Disable Admin Mode
+</button>
       {orders.map((order) => (
         <div key={order.id} style={card}>
           <p><b>Order ID:</b> {order.id}</p>
