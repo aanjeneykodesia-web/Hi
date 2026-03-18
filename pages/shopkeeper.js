@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
 export default function Shopkeeper() {
-
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -13,20 +12,18 @@ export default function Shopkeeper() {
     dropLng: ""
   });
 
+  const [products, setProducts] = useState([]);
   const [detecting, setDetecting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("");
 
   // LOAD PRODUCTS
   useEffect(() => {
-
     const saved = localStorage.getItem("selectedProducts");
 
     if (saved) {
-
       const list = JSON.parse(saved);
-
       setProducts(list);
 
       const productString = list
@@ -38,7 +35,6 @@ export default function Shopkeeper() {
         product: productString
       }));
     }
-
   }, []);
 
   const handleChange = (e) => {
@@ -47,7 +43,6 @@ export default function Shopkeeper() {
 
   // LOCATION
   const detectDropLocation = () => {
-
     if (!navigator.geolocation) {
       alert("Geolocation not supported");
       return;
@@ -56,23 +51,19 @@ export default function Shopkeeper() {
     setDetecting(true);
 
     navigator.geolocation.getCurrentPosition((pos) => {
-
       setForm(prev => ({
         ...prev,
         dropLat: pos.coords.latitude.toFixed(6),
         dropLng: pos.coords.longitude.toFixed(6)
       }));
-
       setDetecting(false);
-
     });
   };
 
   // INVOICE
   const generateInvoice = (order) => {
-
     const productList = products
-      .map((p,i)=>`${i+1}. ${p.product} - ${p.brand} - ${p.pack}`)
+      .map((p, i) => `${i + 1}. ${p.product} - ${p.brand} - ${p.pack}`)
       .join("\n");
 
     const text = `
@@ -85,7 +76,7 @@ Shop: ${order.shopName}
 Products:
 ${productList}
 
-Weight: ${order.weight} tons
+Payment Method: ${order.paymentMethod}
 
 Drop Location:
 ${order.dropLat}, ${order.dropLng}
@@ -93,18 +84,21 @@ ${order.dropLat}, ${order.dropLng}
 Generated: ${new Date().toLocaleString()}
 `;
 
-    const blob = new Blob([text], { type:"text/plain" });
-
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
-
     a.href = url;
     a.download = `invoice-${order.id}.txt`;
     a.click();
   };
 
-  const confirmSubmit = async () => {
+  // PAYMENT + ORDER
+  const handlePayment = async () => {
+    if (!paymentMethod) {
+      alert("Select payment method");
+      return;
+    }
 
     if (!form.shopName || !form.product) {
       alert("Fill required fields");
@@ -113,29 +107,37 @@ Generated: ${new Date().toLocaleString()}
 
     setLoading(true);
 
-    const res = await fetch("/api/orders",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json"},
-      body:JSON.stringify(form)
-    });
+    setTimeout(async () => {
+      alert(`Payment received via ${paymentMethod.toUpperCase()} ✅`);
 
-    const data = await res.json();
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...form,
+          paymentMethod
+        })
+      });
 
-    generateInvoice(data);
+      const data = await res.json();
 
-    alert("Order Created 🚚");
+      generateInvoice(data);
 
-    localStorage.removeItem("selectedProducts");
+      alert("Order Created 🚚");
 
-    setLoading(false);
+      localStorage.removeItem("selectedProducts");
+
+      setLoading(false);
+      setShowPopup(false);
+      setPaymentMethod("");
+    }, 2000);
   };
 
   return (
-
     <div style={container}>
-
       <div style={card}>
-
         <h1 style={title}>SwiftLogix 🚚</h1>
         <p style={subtitle}>Create Logistics Order</p>
 
@@ -148,7 +150,7 @@ Generated: ${new Date().toLocaleString()}
         />
 
         <button
-          onClick={()=>router.push("/products")}
+          onClick={() => router.push("/products")}
           style={productBtn}
         >
           📦 Select Products
@@ -157,22 +159,20 @@ Generated: ${new Date().toLocaleString()}
         <textarea
           value={form.product}
           readOnly
-          placeholder="Selected products will appear here"
           style={textarea}
         />
 
         <input
           name="Mobno"
-          placeholder="Mobno"
+          placeholder="Mobile Number"
           value={form.Mobno}
           onChange={handleChange}
           style={input}
         />
 
-        <h3 style={{marginTop:10}}>📍 Drop Location</h3>
+        <h3>📍 Drop Location</h3>
 
         <div style={row}>
-
           <input
             name="dropLat"
             placeholder="Latitude"
@@ -180,7 +180,6 @@ Generated: ${new Date().toLocaleString()}
             onChange={handleChange}
             style={halfInput}
           />
-
           <input
             name="dropLng"
             placeholder="Longitude"
@@ -188,212 +187,162 @@ Generated: ${new Date().toLocaleString()}
             onChange={handleChange}
             style={halfInput}
           />
-
         </div>
 
-        <button
-          onClick={detectDropLocation}
-          style={locationButton}
-        >
+        <button onClick={detectDropLocation} style={locationButton}>
           {detecting ? "Detecting..." : "📍 Auto Detect Location"}
         </button>
 
         <button
-          onClick={()=>setShowPopup(true)}
+          onClick={() => setShowPopup(true)}
           style={submitBtn}
         >
           🚚 Submit Order
         </button>
 
         <button
-          onClick={()=>router.push("/track")}
+          onClick={() => router.push("/track")}
           style={trackBtn}
         >
           📍 Track My Orders
         </button>
-
       </div>
 
+      {/* PAYMENT POPUP */}
       {showPopup && (
-
         <div style={overlay}>
-
           <div style={popup}>
+            <h3>💳 Complete Payment</h3>
 
-            <h3>Confirm Order</h3>
+            <button
+              onClick={() => setPaymentMethod("upi")}
+              style={{
+                ...methodBtn,
+                background: paymentMethod === "upi" ? "#00c853" : "#eee"
+              }}
+            >
+              📱 UPI Payment
+            </button>
 
-            <p>Invoice will be generated automatically.</p>
+            <button
+              onClick={() => setPaymentMethod("bank")}
+              style={{
+                ...methodBtn,
+                background: paymentMethod === "bank" ? "#00c853" : "#eee"
+              }}
+            >
+              🏦 Bank Transfer
+            </button>
 
-            <div style={{marginTop:20}}>
+            {paymentMethod === "upi" && (
+              <div style={{ marginTop: "10px" }}>
+                <p>UPI ID:</p>
+                <b>swiftlogix@upi</b>
+              </div>
+            )}
 
-              <button
-                onClick={confirmSubmit}
-                style={confirmBtn}
-                disabled={loading}
-              >
-                {loading ? "Processing..." : "Confirm"}
-              </button>
+            {paymentMethod === "bank" && (
+              <div style={{ marginTop: "10px", textAlign: "left" }}>
+                <p><b>Account:</b> SwiftLogix Pvt Ltd</p>
+                <p><b>AC No:</b> 1234567890</p>
+                <p><b>IFSC:</b> SBIN0001234</p>
+              </div>
+            )}
 
-              <button
-                onClick={()=>setShowPopup(false)}
-                style={cancelBtn}
-              >
-                Cancel
-              </button>
+            <button
+              onClick={handlePayment}
+              style={confirmBtn}
+              disabled={loading || !paymentMethod}
+            >
+              {loading ? "Processing..." : "I Have Paid"}
+            </button>
 
-            </div>
-
+            <button
+              onClick={() => setShowPopup(false)}
+              style={cancelBtn}
+            >
+              Cancel
+            </button>
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 }
 
 /* STYLES */
 
-const container={
-  minHeight:"100vh",
-  display:"flex",
-  justifyContent:"center",
-  alignItems:"center",
-  background:"linear-gradient(135deg,#141E30,#243B55)"
+const container = {
+  minHeight: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  background: "linear-gradient(135deg,#141E30,#243B55)"
 };
 
-const card={
-  background:"white",
-  padding:"35px",
-  borderRadius:"20px",
-  width:"430px",
-  boxShadow:"0 20px 40px rgba(0,0,0,0.2)"
+const card = {
+  background: "white",
+  padding: "30px",
+  borderRadius: "20px",
+  width: "420px"
 };
 
-const title={
-  textAlign:"center",
-  fontSize:"30px",
-  fontWeight:"bold"
+const title = { textAlign: "center" };
+const subtitle = { textAlign: "center", color: "#666" };
+
+const input = { width: "100%", padding: "10px", marginBottom: "10px" };
+const textarea = { width: "100%", minHeight: "60px", marginBottom: "10px" };
+
+const row = { display: "flex", gap: "10px" };
+const halfInput = { width: "50%", padding: "10px" };
+
+const productBtn = { width: "100%", padding: "10px", background: "orange", color: "white" };
+const locationButton = { width: "100%", padding: "10px", background: "blue", color: "white" };
+
+const submitBtn = { width: "100%", padding: "12px", background: "green", color: "white" };
+const trackBtn = { width: "100%", padding: "10px", background: "purple", color: "white" };
+
+const overlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center"
 };
 
-const subtitle={
-  textAlign:"center",
-  color:"#666",
-  marginBottom:"20px"
+const popup = {
+  background: "white",
+  padding: "20px",
+  borderRadius: "10px",
+  width: "300px",
+  textAlign: "center"
 };
 
-const input={
-  width:"100%",
-  padding:"12px",
-  marginBottom:"12px",
-  borderRadius:"10px",
-  border:"1px solid #ddd",
-  fontSize:"14px"
+const methodBtn = {
+  width: "100%",
+  padding: "10px",
+  marginBottom: "10px",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer"
 };
 
-const textarea={
-  width:"100%",
-  padding:"12px",
-  minHeight:"70px",
-  marginBottom:"12px",
-  borderRadius:"10px",
-  border:"1px solid #ddd"
+const confirmBtn = {
+  background: "green",
+  color: "white",
+  padding: "10px",
+  width: "100%",
+  marginTop: "10px"
 };
 
-const row={
-  display:"flex",
-  justifyContent:"space-between"
-};
-
-const halfInput={
-  width:"48%",
-  padding:"12px",
-  borderRadius:"10px",
-  border:"1px solid #ddd"
-};
-
-const productBtn={
-  width:"100%",
-  padding:"12px",
-  borderRadius:"10px",
-  border:"none",
-  background:"#ff9800",
-  color:"white",
-  fontWeight:"bold",
-  marginBottom:"10px",
-  cursor:"pointer"
-};
-
-const locationButton={
-  width:"100%",
-  padding:"10px",
-  borderRadius:"10px",
-  border:"none",
-  background:"#2962ff",
-  color:"white",
-  marginTop:"10px",
-  cursor:"pointer"
-};
-
-const submitBtn={
-  width:"100%",
-  padding:"14px",
-  marginTop:"15px",
-  borderRadius:"12px",
-  border:"none",
-  background:"#00c853",
-  color:"white",
-  fontWeight:"bold",
-  cursor:"pointer"
-};
-
-const trackBtn={
-  width:"100%",
-  padding:"12px",
-  marginTop:"10px",
-  borderRadius:"10px",
-  border:"none",
-  background:"#673ab7",
-  color:"white",
-  cursor:"pointer"
-};
-
-const overlay={
-  position:"fixed",
-  top:0,
-  left:0,
-  width:"100%",
-  height:"100%",
-  background:"rgba(0,0,0,0.6)",
-  display:"flex",
-  justifyContent:"center",
-  alignItems:"center"
-};
-
-const popup={
-  background:"white",
-  padding:"25px",
-  borderRadius:"15px",
-  width:"300px",
-  textAlign:"center"
-};
-
-const confirmBtn={
-  background:"#00c853",
-  color:"white",
-  border:"none",
-  padding:"10px 15px",
-  borderRadius:"8px",
-  marginRight:"10px",
-  cursor:"pointer"
-};
-
-const cancelBtn={
-  background:"#ff5252",
-  color:"white",
-  border:"none",
-  padding:"10px 15px",
-  borderRadius:"8px",
-  cursor:"pointer"
+const cancelBtn = {
+  background: "red",
+  color: "white",
+  padding: "10px",
+  width: "100%",
+  marginTop: "5px"
 };
