@@ -150,4 +150,194 @@ Generated: ${new Date().toLocaleString()}
 
       const order = await res.json();
 
-      // 🔹
+      // 🔹 Razorpay popup
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+        amount: order.amount,
+        currency: "INR",
+        name: "SwiftLogix",
+        description: `Payment ₹${totalAmount}`,
+        order_id: order.id,
+
+        handler: async function () {
+
+          // 🔹 Create order AFTER payment
+          const res2 = await fetch("/api/orders",{
+            method:"POST",
+            headers:{ "Content-Type":"application/json"},
+            body:JSON.stringify({
+              ...form,
+              totalAmount
+            })
+          });
+
+          const data = await res2.json();
+
+          generateInvoice(data);
+
+          alert("✅ Payment Successful & Order Created");
+
+          localStorage.removeItem("selectedProducts");
+          setProducts([]);
+
+          setLoading(false);
+        },
+
+        prefill: {
+          name: form.shopName,
+          contact: form.Mobno
+        },
+
+        theme: { color:"#00c853" }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (err) {
+      alert("Payment failed");
+      setLoading(false);
+    }
+  };
+
+  return (
+
+    <div style={container}>
+
+      <div style={card}>
+
+        <h1 style={title}>SwiftLogix 🚚</h1>
+        <p style={subtitle}>Create Logistics Order</p>
+
+        <input
+          name="shopName"
+          placeholder="🏪 Shop Name"
+          value={form.shopName}
+          onChange={handleChange}
+          style={input}
+        />
+
+        <button
+          onClick={()=>router.push("/products")}
+          style={productBtn}
+        >
+          📦 Select Products
+        </button>
+
+        <textarea
+          value={form.product}
+          readOnly
+          placeholder="Selected products will appear here"
+          style={textarea}
+        />
+
+        <input
+          name="Mobno"
+          placeholder="Mobno"
+          value={form.Mobno}
+          onChange={handleChange}
+          style={input}
+        />
+
+        <h3 style={{marginTop:10}}>📍 Drop Location</h3>
+
+        <div style={row}>
+
+          <input
+            name="dropLat"
+            placeholder="Latitude"
+            value={form.dropLat}
+            onChange={handleChange}
+            style={halfInput}
+          />
+
+          <input
+            name="dropLng"
+            placeholder="Longitude"
+            value={form.dropLng}
+            onChange={handleChange}
+            style={halfInput}
+          />
+
+        </div>
+
+        <button
+          onClick={detectDropLocation}
+          style={locationButton}
+        >
+          {detecting ? "Detecting..." : "📍 Auto Detect Location"}
+        </button>
+
+        <button
+          onClick={()=>setShowPopup(true)}
+          style={submitBtn}
+        >
+          🚚 Submit Order
+        </button>
+
+        <button
+          onClick={()=>router.push("/track")}
+          style={trackBtn}
+        >
+          📍 Track My Orders
+        </button>
+
+      </div>
+
+      {showPopup && (
+
+        <div style={overlay}>
+
+          <div style={popup}>
+
+            <h3>Confirm Order</h3>
+
+            <p>Total Amount: ₹{calculateTotal()}</p>
+
+            <div style={{marginTop:20}}>
+
+              <button
+                onClick={confirmSubmit}
+                style={confirmBtn}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Pay & Confirm"}
+              </button>
+
+              <button
+                onClick={()=>setShowPopup(false)}
+                style={cancelBtn}
+              >
+                Cancel
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+    </div>
+  );
+}
+
+/* STYLES (UNCHANGED) */
+
+const container={ minHeight:"100vh", display:"flex", justifyContent:"center", alignItems:"center", background:"linear-gradient(135deg,#141E30,#243B55)" };
+const card={ background:"white", padding:"35px", borderRadius:"20px", width:"430px", boxShadow:"0 20px 40px rgba(0,0,0,0.2)" };
+const title={ textAlign:"center", fontSize:"30px", fontWeight:"bold" };
+const subtitle={ textAlign:"center", color:"#666", marginBottom:"20px" };
+const input={ width:"100%", padding:"12px", marginBottom:"12px", borderRadius:"10px", border:"1px solid #ddd", fontSize:"14px" };
+const textarea={ width:"100%", padding:"12px", minHeight:"70px", marginBottom:"12px", borderRadius:"10px", border:"1px solid #ddd" };
+const row={ display:"flex", justifyContent:"space-between" };
+const halfInput={ width:"48%", padding:"12px", borderRadius:"10px", border:"1px solid #ddd" };
+const productBtn={ width:"100%", padding:"12px", borderRadius:"10px", border:"none", background:"#ff9800", color:"white", fontWeight:"bold", marginBottom:"10px", cursor:"pointer" };
+const locationButton={ width:"100%", padding:"10px", borderRadius:"10px", border:"none", background:"#2962ff", color:"white", marginTop:"10px", cursor:"pointer" };
+const submitBtn={ width:"100%", padding:"14px", marginTop:"15px", borderRadius:"12px", border:"none", background:"#00c853", color:"white", fontWeight:"bold", cursor:"pointer" };
+const trackBtn={ width:"100%", padding:"12px", marginTop:"10px", borderRadius:"10px", border:"none", background:"#673ab7", color:"white", cursor:"pointer" };
+const overlay={ position:"fixed", top:0, left:0, width:"100%", height:"100%", background:"rgba(0,0,0,0.6)", display:"flex", justifyContent:"center", alignItems:"center" };
+const popup={ background:"white", padding:"25px", borderRadius:"15px", width:"300px", textAlign:"center" };
+const confirmBtn={ background:"#00c853", color:"white", border:"none", padding:"10px 15px", borderRadius:"8px", marginRight:"10px", cursor:"pointer" };
+const cancelBtn={ background:"#ff5252", color:"white", border:"none", padding:"10px 15px", borderRadius:"8px", cursor:"pointer" };
