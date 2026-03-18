@@ -113,7 +113,7 @@ export default function Manufacturer() {
         <div key={order.id} style={card}>
           <p><b>Shop:</b> {order.shopName}</p>
           <p><b>Product:</b> {order.product}</p>
-          <p><b>Weight:</b> {order.Mobno} tons</p>
+          <p><b>Mobno:</b> {order.Mobno} </p>
 
           <p>
             <b>Drop:</b>{" "}
