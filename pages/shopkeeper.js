@@ -1,348 +1,257 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 export default function Shopkeeper() {
-  const router = useRouter();
 
   const [form, setForm] = useState({
     shopName: "",
-    product: "",
-    Mobno: "",
-    dropLat: "",
-    dropLng: ""
+    Mobno: ""
   });
 
   const [products, setProducts] = useState([]);
-  const [detecting, setDetecting] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("");
 
-  // LOAD PRODUCTS
-  useEffect(() => {
-    const saved = localStorage.getItem("selectedProducts");
-
-    if (saved) {
-      const list = JSON.parse(saved);
-      setProducts(list);
-
-      const productString = list
-        .map(p => `${p.product} - ${p.brand} - ${p.pack}`)
-        .join("\n");
-
-      setForm(prev => ({
-        ...prev,
-        product: productString
-      }));
+  // ✅ PRICE LIST (can be made dynamic later)
+  const priceList = {
+    "Cooking Oil": {
+      "1L": 150,
+      "5L": 700,
+      "15L": 2000
+    },
+    "Rice": {
+      "5kg": 300,
+      "10kg": 550,
+      "25kg": 1300
+    },
+    "Sugar": {
+      "1kg": 50,
+      "5kg": 240,
+      "10kg": 480
     }
+  };
+
+  // ✅ LOAD PRODUCTS + RAZORPAY SCRIPT
+  useEffect(() => {
+    const savedProducts = localStorage.getItem("selectedProducts");
+    if (savedProducts) {
+      setProducts(JSON.parse(savedProducts));
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
 
+  // ✅ INPUT CHANGE
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // LOCATION
-  const detectDropLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation not supported");
-      return;
-    }
+  // ✅ TOTAL CALCULATION
+  const calculateTotal = () => {
+    let total = 0;
 
-    setDetecting(true);
-
-    navigator.geolocation.getCurrentPosition((pos) => {
-      setForm(prev => ({
-        ...prev,
-        dropLat: pos.coords.latitude.toFixed(6),
-        dropLng: pos.coords.longitude.toFixed(6)
-      }));
-      setDetecting(false);
+    products.forEach((item) => {
+      const price = priceList[item.product]?.[item.pack] || 0;
+      total += price * (item.quantity || 1);
     });
+
+    return total;
   };
 
-  // INVOICE
+  // ✅ REMOVE PRODUCT (extra useful)
+  const removeProduct = (index) => {
+    const updated = products.filter((_, i) => i !== index);
+    setProducts(updated);
+    localStorage.setItem("selectedProducts", JSON.stringify(updated));
+  };
+
+  // ✅ GENERATE INVOICE (simple)
   const generateInvoice = (order) => {
-    const productList = products
-      .map((p, i) => `${i + 1}. ${p.product} - ${p.brand} - ${p.pack}`)
-      .join("\n");
+    let text = `Invoice\n\nShop: ${order.shopName}\nMobile: ${order.Mobno}\n\n`;
 
-    const text = `
-SWIFTLOGIX INVOICE
------------------------------
-Invoice ID: INV-${order.id}
+    products.forEach((p) => {
+      text += `${p.product} - ${p.brand} - ${p.pack} x ${p.quantity}\n`;
+    });
 
-Shop: ${order.shopName}
+    text += `\nTotal: ₹${order.totalAmount}`;
 
-Products:
-${productList}
-
-Payment Method: ${order.paymentMethod}
-
-Drop Location:
-${order.dropLat}, ${order.dropLng}
-
-Generated: ${new Date().toLocaleString()}
-`;
-
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice-${order.id}.txt`;
-    a.click();
+    console.log(text);
   };
 
-  // PAYMENT + ORDER
-  const handlePayment = async () => {
-    if (!paymentMethod) {
-      alert("Select payment method");
+  // ✅ PAYMENT + ORDER
+  const confirmSubmit = async () => {
+
+    if (!form.shopName || products.length === 0) {
+      alert("Fill details & select products");
       return;
     }
 
-    if (!form.shopName || !form.product) {
-      alert("Fill required fields");
-      return;
-    }
+    const totalAmount = calculateTotal();
 
     setLoading(true);
 
-    setTimeout(async () => {
-      alert(`Payment received via ${paymentMethod.toUpperCase()} ✅`);
-
-      const res = await fetch("/api/orders", {
+    try {
+      // 🔹 Create Razorpay order
+      const res = await fetch("/api/payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          ...form,
-          paymentMethod
-        })
+        body: JSON.stringify({ amount: totalAmount })
       });
 
-      const data = await res.json();
+      const order = await res.json();
 
-      generateInvoice(data);
+      // 🔹 Razorpay popup
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+        amount: order.amount,
+        currency: "INR",
+        name: "SwiftLogix",
+        description: `Payment ₹${totalAmount}`,
+        order_id: order.id,
 
-      alert("Order Created 🚚");
+        handler: async function () {
 
-      localStorage.removeItem("selectedProducts");
+          // 🔹 Create order AFTER payment
+          const res2 = await fetch("/api/orders", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              ...form,
+              products,
+              totalAmount
+            })
+          });
 
+          const data = await res2.json();
+
+          generateInvoice(data);
+
+          alert(`✅ Payment Successful ₹${totalAmount}`);
+
+          localStorage.removeItem("selectedProducts");
+          setProducts([]);
+          setForm({ shopName: "", Mobno: "" });
+          setLoading(false);
+        },
+
+        prefill: {
+          name: form.shopName,
+          contact: form.Mobno
+        },
+
+        theme: {
+          color: "#16a34a"
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (err) {
+      alert("Payment failed");
       setLoading(false);
-      setShowPopup(false);
-      setPaymentMethod("");
-    }, 2000);
+    }
   };
 
   return (
     <div style={container}>
-      <div style={card}>
-        <h1 style={title}>SwiftLogix 🚚</h1>
-        <p style={subtitle}>Create Logistics Order</p>
+      <h1>🚚 Shopkeeper Dashboard</h1>
 
-        <input
-          name="shopName"
-          placeholder="🏪 Shop Name"
-          value={form.shopName}
-          onChange={handleChange}
-          style={input}
-        />
+      <input
+        name="shopName"
+        placeholder="Shop Name"
+        value={form.shopName}
+        onChange={handleChange}
+        style={input}
+      />
 
-        <button
-          onClick={() => router.push("/products")}
-          style={productBtn}
-        >
-          📦 Select Products
-        </button>
+      <input
+        name="Mobno"
+        placeholder="Mobile Number"
+        value={form.Mobno}
+        onChange={handleChange}
+        style={input}
+      />
 
-        <textarea
-          value={form.product}
-          readOnly
-          style={textarea}
-        />
+      <h3>Selected Products</h3>
 
-        <input
-          name="Mobno"
-          placeholder="Mobile Number"
-          value={form.Mobno}
-          onChange={handleChange}
-          style={input}
-        />
-
-        <h3>📍 Drop Location</h3>
-
-        <div style={row}>
-          <input
-            name="dropLat"
-            placeholder="Latitude"
-            value={form.dropLat}
-            onChange={handleChange}
-            style={halfInput}
-          />
-          <input
-            name="dropLng"
-            placeholder="Longitude"
-            value={form.dropLng}
-            onChange={handleChange}
-            style={halfInput}
-          />
-        </div>
-
-        <button onClick={detectDropLocation} style={locationButton}>
-          {detecting ? "Detecting..." : "📍 Auto Detect Location"}
-        </button>
-
-        <button
-          onClick={() => setShowPopup(true)}
-          style={submitBtn}
-        >
-          🚚 Submit Order
-        </button>
-
-        <button
-          onClick={() => router.push("/track")}
-          style={trackBtn}
-        >
-          📍 Track My Orders
-        </button>
-      </div>
-
-      {/* PAYMENT POPUP */}
-      {showPopup && (
-        <div style={overlay}>
-          <div style={popup}>
-            <h3>💳 Complete Payment</h3>
+      {products.length === 0 ? (
+        <p>No products selected</p>
+      ) : (
+        products.map((p, i) => (
+          <div key={i} style={productBox}>
+            {p.product} - {p.brand} - {p.pack} x {p.quantity}
 
             <button
-              onClick={() => setPaymentMethod("upi")}
-              style={{
-                ...methodBtn,
-                background: paymentMethod === "upi" ? "#00c853" : "#eee"
-              }}
+              onClick={() => removeProduct(i)}
+              style={removeBtn}
             >
-              📱 UPI Payment
-            </button>
-
-            <button
-              onClick={() => setPaymentMethod("bank")}
-              style={{
-                ...methodBtn,
-                background: paymentMethod === "bank" ? "#00c853" : "#eee"
-              }}
-            >
-              🏦 Bank Transfer
-            </button>
-
-            {paymentMethod === "upi" && (
-              <div style={{ marginTop: "10px" }}>
-                <p>UPI ID:</p>
-                <b>swiftlogix@upi</b>
-              </div>
-            )}
-
-            {paymentMethod === "bank" && (
-              <div style={{ marginTop: "10px", textAlign: "left" }}>
-                <p><b>Account:</b> SwiftLogix Pvt Ltd</p>
-                <p><b>AC No:</b> 1234567890</p>
-                <p><b>IFSC:</b> SBIN0001234</p>
-              </div>
-            )}
-
-            <button
-              onClick={handlePayment}
-              style={confirmBtn}
-              disabled={loading || !paymentMethod}
-            >
-              {loading ? "Processing..." : "I Have Paid"}
-            </button>
-
-            <button
-              onClick={() => setShowPopup(false)}
-              style={cancelBtn}
-            >
-              Cancel
+              ❌
             </button>
           </div>
-        </div>
+        ))
       )}
+
+      <h2>Total: ₹{calculateTotal()}</h2>
+
+      <button
+        onClick={confirmSubmit}
+        style={button}
+        disabled={loading}
+      >
+        {loading ? "Processing..." : "Confirm & Pay"}
+      </button>
     </div>
   );
 }
 
-/* STYLES */
-
+// 🎨 STYLES
 const container = {
-  minHeight: "100vh",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  background: "linear-gradient(135deg,#141E30,#243B55)"
-};
-
-const card = {
-  background: "white",
   padding: "30px",
-  borderRadius: "20px",
-  width: "420px"
+  maxWidth: "600px",
+  margin: "auto",
+  fontFamily: "Arial"
 };
 
-const title = { textAlign: "center" };
-const subtitle = { textAlign: "center", color: "#666" };
-
-const input = { width: "100%", padding: "10px", marginBottom: "10px" };
-const textarea = { width: "100%", minHeight: "60px", marginBottom: "10px" };
-
-const row = { display: "flex", gap: "10px" };
-const halfInput = { width: "50%", padding: "10px" };
-
-const productBtn = { width: "100%", padding: "10px", background: "orange", color: "white" };
-const locationButton = { width: "100%", padding: "10px", background: "blue", color: "white" };
-
-const submitBtn = { width: "100%", padding: "12px", background: "green", color: "white" };
-const trackBtn = { width: "100%", padding: "10px", background: "purple", color: "white" };
-
-const overlay = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.6)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center"
-};
-
-const popup = {
-  background: "white",
-  padding: "20px",
-  borderRadius: "10px",
-  width: "300px",
-  textAlign: "center"
-};
-
-const methodBtn = {
+const input = {
   width: "100%",
   padding: "10px",
   marginBottom: "10px",
+  borderRadius: "6px",
+  border: "1px solid #ccc"
+};
+
+const button = {
+  padding: "12px",
+  background: "#16a34a",
+  color: "#fff",
   border: "none",
-  borderRadius: "8px",
-  cursor: "pointer"
-};
-
-const confirmBtn = {
-  background: "green",
-  color: "white",
-  padding: "10px",
   width: "100%",
-  marginTop: "10px"
+  cursor: "pointer",
+  borderRadius: "6px",
+  fontWeight: "bold"
 };
 
-const cancelBtn = {
+const productBox = {
+  padding: "10px",
+  background: "#f3f4f6",
+  marginBottom: "8px",
+  borderRadius: "6px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center"
+};
+
+const removeBtn = {
   background: "red",
-  color: "white",
-  padding: "10px",
-  width: "100%",
-  marginTop: "5px"
+  color: "#fff",
+  border: "none",
+  padding: "5px 8px",
+  cursor: "pointer",
+  borderRadius: "4px"
 };
