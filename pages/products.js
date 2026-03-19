@@ -27,6 +27,9 @@ export default function Products() {
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // ✅ NEW: quantity state
+  const [quantities, setQuantities] = useState({});
+
   const [newProduct, setNewProduct] = useState({
     name: "",
     brands: "",
@@ -51,22 +54,30 @@ export default function Products() {
     }
   }, []);
 
-  // ✅ Add product to order
+  // ✅ ADD PRODUCT WITH QUANTITY
   const addSelectedProduct = (product, brand, pack) => {
-    const selected = { product, brand, pack };
+    const key = `${product}-${brand}-${pack}`;
+    const quantity = quantities[key] || 1;
+
+    const selected = {
+      product,
+      brand,
+      pack,
+      quantity
+    };
 
     const updated = [...selectedProducts, selected];
     setSelectedProducts(updated);
     localStorage.setItem("selectedProducts", JSON.stringify(updated));
 
-    alert(`${product} - ${brand} - ${pack} added`);
+    alert(`${product} - ${brand} - ${pack} x ${quantity} added`);
   };
 
   const goToShopkeeper = () => {
     router.push("/shopkeeper");
   };
 
-  // ✅ Add new product (Admin only)
+  // ADMIN ADD
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.brands || !newProduct.packs) {
       alert("Please fill all fields");
@@ -91,7 +102,7 @@ export default function Products() {
     alert("Product added successfully");
   };
 
-  // ✅ Delete product
+  // DELETE
   const handleDeleteProduct = (index) => {
     if (!confirm("Delete this product?")) return;
 
@@ -113,7 +124,7 @@ export default function Products() {
     setProducts([...defaultProducts, ...updated]);
   };
 
-  // ✅ Edit product
+  // EDIT
   const handleEditProduct = (index) => {
     const defaultLength = defaultProducts.length;
 
@@ -128,8 +139,8 @@ export default function Products() {
     const product = adminProducts[index - defaultLength];
 
     const name = prompt("Product name", product.name);
-    const brands = prompt("Brands (comma separated)", product.brands.join(", "));
-    const packs = prompt("Packs (comma separated)", product.packs.join(", "));
+    const brands = prompt("Brands", product.brands.join(", "));
+    const packs = prompt("Packs", product.packs.join(", "));
 
     if (!name || !brands || !packs) return;
 
@@ -152,7 +163,7 @@ export default function Products() {
     <div style={container}>
       <div style={header}>
         <h1 style={title}>📦 Product Management</h1>
-        <p style={subtitle}>Select multiple products</p>
+        <p style={subtitle}>Select multiple products with quantity</p>
       </div>
 
       <div style={topActions}>
@@ -211,6 +222,7 @@ export default function Products() {
         </div>
       )}
 
+      {/* SELECTED PRODUCTS */}
       <div style={selectedBox}>
         <h3>Selected Products</h3>
         {selectedProducts.length === 0 ? (
@@ -218,12 +230,13 @@ export default function Products() {
         ) : (
           selectedProducts.map((item, i) => (
             <div key={i} style={selectedItem}>
-              {item.product} - {item.brand} - {item.pack}
+              {item.product} - {item.brand} - {item.pack} x {item.quantity}
             </div>
           ))
         )}
       </div>
 
+      {/* PRODUCTS GRID */}
       <div style={grid}>
         {products.map((p, index) => (
           <div key={index} style={card}>
@@ -253,15 +266,44 @@ export default function Products() {
               <div key={brand}>
                 <h4>{brand}</h4>
 
-                {p.packs.map((pack) => (
-                  <button
-                    key={pack}
-                    style={button}
-                    onClick={() => addSelectedProduct(p.name, brand, pack)}
-                  >
-                    {brand} - {pack}
-                  </button>
-                ))}
+                {p.packs.map((pack) => {
+                  const key = `${p.name}-${brand}-${pack}`;
+
+                  return (
+                    <div key={pack} style={{ marginBottom: "8px" }}>
+
+                      {/* QUANTITY INPUT */}
+                      <input
+                        type="number"
+                        min="1"
+                        value={quantities[key] || ""}
+                        placeholder="Qty"
+                        onChange={(e) =>
+                          setQuantities({
+                            ...quantities,
+                            [key]: parseInt(e.target.value) || 1
+                          })
+                        }
+                        style={{
+                          width: "60px",
+                          marginRight: "8px",
+                          padding: "5px"
+                        }}
+                      />
+
+                      {/* ADD BUTTON */}
+                      <button
+                        style={button}
+                        onClick={() =>
+                          addSelectedProduct(p.name, brand, pack)
+                        }
+                      >
+                        {brand} - {pack}
+                      </button>
+
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -271,7 +313,7 @@ export default function Products() {
   );
 }
 
-/* ✅ Styles */
+/* STYLES */
 
 const container = { padding: "30px" };
 const header = { textAlign: "center", marginBottom: "20px" };
