@@ -32,7 +32,7 @@ export default function OrderDetails() {
         <p><b>Order ID:</b> {order.id}</p>
         <p><b>Shop Name:</b> {order.shopName}</p>
         <p><b>Product:</b> {order.product}</p>
-        <p><b>Weight:</b> {order.weight} tons</p>
+        <p><b>Mobno:</b> {order.Mobno} </p>
 
         <hr />
 
