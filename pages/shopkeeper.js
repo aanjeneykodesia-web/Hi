@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import priceList from "../data/price.json"; // ✅ IMPORT
 
 export default function Shopkeeper() {
 
@@ -16,13 +17,6 @@ export default function Shopkeeper() {
   const [detecting, setDetecting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [products, setProducts] = useState([]);
-
-  // ✅ PRICE LIST
-  const priceList = {
-    "Cooking Oil": { "1L": 150, "5L": 700, "15L": 2000 },
-    "Rice": { "5kg": 300, "10kg": 550, "25kg": 1300 },
-    "Sugar": { "1kg": 50, "5kg": 240, "10kg": 480 }
-  };
 
   // LOAD PRODUCTS
   useEffect(() => {
@@ -55,7 +49,7 @@ export default function Shopkeeper() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ✅ TOTAL
+  // ✅ TOTAL FROM JSON
   const calculateTotal = () => {
     let total = 0;
 
@@ -108,8 +102,6 @@ Total Amount: ₹${order.totalAmount}
 
 Drop Location:
 ${order.dropLat}, ${order.dropLng}
-
-Generated: ${new Date().toLocaleString()}
 `;
 
     const blob = new Blob([text], { type:"text/plain" });
@@ -121,100 +113,87 @@ Generated: ${new Date().toLocaleString()}
     a.click();
   };
 
-  // ======================
-  // 🔥 UPI PAYMENT
-  // ======================
-  const payWithUPI = async () => {
+  // =========================
+  // ✅ BANK PAYMENT (RAZORPAY)
+  // =========================
+  const confirmSubmit = async () => {
 
     if (!form.shopName || products.length === 0) {
       alert("Fill required fields");
       return;
     }
 
-    const amount = calculateTotal();
-
-    const upiId = "yourupi@okaxis"; // 🔥 CHANGE THIS
-    const name = "SwiftLogix";
-
-    const url = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR`;
-
-    // OPEN UPI APP
-    window.location.href = url;
-
-    // Create order after delay
-    setTimeout(async () => {
-
-      const res = await fetch("/api/orders", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json"},
-        body: JSON.stringify({ ...form, totalAmount: amount })
-      });
-
-      const data = await res.json();
-
-      generateInvoice(data);
-      alert("✅ Order Created (UPI)");
-
-      localStorage.removeItem("selectedProducts");
-      setProducts([]);
-
-    }, 5000);
-  };
-
-  // ======================
-  // 🔥 BANK / CARD PAYMENT
-  // ======================
-  const payWithRazorpay = async () => {
-
     const totalAmount = calculateTotal();
 
-    const res = await fetch("/api/payment",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json"},
-      body: JSON.stringify({ amount: totalAmount })
-    });
+    try {
 
-    const order = await res.json();
+      // 🔹 Create order
+      const res = await fetch("/api/payment",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json"},
+        body: JSON.stringify({ amount: totalAmount })
+      });
 
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
-      amount: order.amount,
-      currency: "INR",
-      name: "SwiftLogix",
-      description: "Order Payment",
-      order_id: order.id,
+      const order = await res.json();
 
-      handler: async function () {
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+        amount: order.amount,
+        currency: "INR",
+        name: "SwiftLogix",
+        description: "Order Payment",
+        order_id: order.id,
 
-        const res2 = await fetch("/api/orders",{
-          method:"POST",
-          headers:{ "Content-Type":"application/json"},
-          body: JSON.stringify({
-            ...form,
-            totalAmount
-          })
-        });
+        handler: async function (response) {
 
-        const data = await res2.json();
+          // 🔐 VERIFY PAYMENT
+          const verifyRes = await fetch("/api/verify-payment", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json"},
+            body: JSON.stringify(response)
+          });
 
-        generateInvoice(data);
+          const verifyData = await verifyRes.json();
 
-        alert("✅ Payment Successful");
+          if (!verifyData.success) {
+            alert("Payment verification failed ❌");
+            return;
+          }
 
-        localStorage.removeItem("selectedProducts");
-        setProducts([]);
-      },
+          // ✅ SAVE ORDER AFTER VERIFIED PAYMENT
+          const res2 = await fetch("/api/orders",{
+            method:"POST",
+            headers:{ "Content-Type":"application/json"},
+            body: JSON.stringify({
+              ...form,
+              totalAmount
+            })
+          });
 
-      prefill: {
-        name: form.shopName,
-        contact: form.Mobno
-      },
+          const data = await res2.json();
 
-      theme: { color:"#00c853" }
-    };
+          generateInvoice(data);
 
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+          alert("✅ Payment Successful & Order Created");
+
+          localStorage.removeItem("selectedProducts");
+          setProducts([]);
+        },
+
+        prefill: {
+          name: form.shopName,
+          contact: form.Mobno
+        },
+
+        theme: { color:"#00c853" }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (err) {
+      alert("Payment failed");
+    }
   };
 
   return (
@@ -241,11 +220,7 @@ Generated: ${new Date().toLocaleString()}
           📦 Select Products
         </button>
 
-        <textarea
-          value={form.product}
-          readOnly
-          style={textarea}
-        />
+        <textarea value={form.product} readOnly style={textarea} />
 
         <input
           name="Mobno"
@@ -276,7 +251,6 @@ Generated: ${new Date().toLocaleString()}
 
       </div>
 
-      {/* POPUP */}
       {showPopup && (
         <div style={overlay}>
           <div style={popup}>
@@ -284,11 +258,7 @@ Generated: ${new Date().toLocaleString()}
             <h3>Confirm Order</h3>
             <p>Total Amount: ₹{calculateTotal()}</p>
 
-            <button onClick={payWithUPI} style={confirmBtn}>
-              Pay via UPI (GPay / PhonePe)
-            </button>
-
-            <button onClick={payWithRazorpay} style={confirmBtn}>
+            <button onClick={confirmSubmit} style={confirmBtn}>
               Pay via Bank / Card
             </button>
 
@@ -304,167 +274,4 @@ Generated: ${new Date().toLocaleString()}
   );
 }
 
-/* STYLES (UNCHANGED) */
-
-const container = {
-  minHeight: "100vh",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  background: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
-  padding: "20px"
-};
-
-const card = {
-  background: "rgba(255,255,255,0.95)",
-  backdropFilter: "blur(10px)",
-  padding: "35px",
-  borderRadius: "20px",
-  width: "430px",
-  boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
-  transition: "0.3s"
-};
-
-const title = {
-  textAlign: "center",
-  fontSize: "32px",
-  fontWeight: "bold",
-  marginBottom: "5px",
-  color: "#111"
-};
-
-const subtitle = {
-  textAlign: "center",
-  color: "#666",
-  marginBottom: "20px",
-  fontSize: "14px"
-};
-
-const input = {
-  width: "100%",
-  padding: "14px",
-  marginBottom: "12px",
-  borderRadius: "12px",
-  border: "1px solid #e5e7eb",
-  fontSize: "14px",
-  outline: "none",
-  transition: "0.2s",
-  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)"
-};
-
-const textarea = {
-  width: "100%",
-  padding: "14px",
-  minHeight: "80px",
-  marginBottom: "12px",
-  borderRadius: "12px",
-  border: "1px solid #e5e7eb",
-  fontSize: "14px",
-  background: "#f9fafb"
-};
-
-const row = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "10px"
-};
-
-const halfInput = {
-  width: "50%",
-  padding: "14px",
-  borderRadius: "12px",
-  border: "1px solid #e5e7eb"
-};
-
-const productBtn = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "12px",
-  border: "none",
-  background: "linear-gradient(135deg,#ff9800,#ff5722)",
-  color: "white",
-  fontWeight: "bold",
-  marginBottom: "10px",
-  cursor: "pointer",
-  transition: "0.2s"
-};
-
-const locationButton = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "12px",
-  border: "none",
-  background: "linear-gradient(135deg,#2962ff,#00b0ff)",
-  color: "white",
-  marginTop: "10px",
-  cursor: "pointer"
-};
-
-const submitBtn = {
-  width: "100%",
-  padding: "15px",
-  borderRadius: "14px",
-  border: "none",
-  background: "linear-gradient(135deg,#00c853,#00e676)",
-  color: "white",
-  fontWeight: "bold",
-  marginTop: "15px",
-  cursor: "pointer",
-  fontSize: "16px",
-  boxShadow: "0 10px 25px rgba(0,200,83,0.3)"
-};
-
-const trackBtn = {
-  width: "100%",
-  padding: "13px",
-  borderRadius: "12px",
-  border: "none",
-  background: "linear-gradient(135deg,#673ab7,#9c27b0)",
-  color: "white",
-  marginTop: "10px",
-  cursor: "pointer"
-};
-
-const overlay = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.7)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center"
-};
-
-const popup = {
-  background: "white",
-  padding: "30px",
-  borderRadius: "18px",
-  width: "320px",
-  textAlign: "center",
-  boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
-};
-
-const confirmBtn = {
-  background: "linear-gradient(135deg,#00c853,#00e676)",
-  color: "white",
-  padding: "12px",
-  marginTop: "12px",
-  width: "100%",
-  border: "none",
-  borderRadius: "10px",
-  fontWeight: "bold",
-  cursor: "pointer"
-};
-
-const cancelBtn = {
-  background: "linear-gradient(135deg,#ff5252,#ff1744)",
-  color: "white",
-  padding: "12px",
-  marginTop: "10px",
-  width: "100%",
-  border: "none",
-  borderRadius: "10px",
-  cursor: "pointer"
-};
+/* SAME STYLES */
