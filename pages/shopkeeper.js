@@ -275,3 +275,119 @@ ${order.dropLat}, ${order.dropLng}
 }
 
 /* SAME STYLES */
+const container={ 
+  minHeight:"100vh", 
+  display:"flex", 
+  justifyContent:"center", 
+  alignItems:"center", 
+  background:"linear-gradient(135deg,#141E30,#243B55)" 
+};
+
+const card={ 
+  background:"white", 
+  padding:"35px", 
+  borderRadius:"20px", 
+  width:"430px", 
+  boxShadow:"0 20px 40px rgba(0,0,0,0.2)" 
+};
+
+const title={ textAlign:"center", fontSize:"30px", fontWeight:"bold" };
+const subtitle={ textAlign:"center", color:"#666", marginBottom:"20px" };
+
+const input={ 
+  width:"100%", 
+  padding:"12px", 
+  marginBottom:"12px", 
+  borderRadius:"10px", 
+  border:"1px solid #ddd" 
+};
+
+const textarea={ 
+  width:"100%", 
+  padding:"12px", 
+  minHeight:"70px", 
+  marginBottom:"12px", 
+  borderRadius:"10px", 
+  border:"1px solid #ddd" 
+};
+
+const row={ display:"flex", justifyContent:"space-between" };
+
+const halfInput={ 
+  width:"48%", 
+  padding:"12px", 
+  borderRadius:"10px", 
+  border:"1px solid #ddd" 
+};
+
+const productBtn={ 
+  width:"100%", 
+  padding:"12px", 
+  borderRadius:"10px", 
+  border:"none", 
+  background:"#ff9800", 
+  color:"white" 
+};
+
+const locationButton={ 
+  width:"100%", 
+  padding:"10px", 
+  borderRadius:"10px", 
+  border:"none", 
+  background:"#2962ff", 
+  color:"white" 
+};
+
+const submitBtn={ 
+  width:"100%", 
+  padding:"14px", 
+  borderRadius:"12px", 
+  border:"none", 
+  background:"#00c853", 
+  color:"white" 
+};
+
+const trackBtn={ 
+  width:"100%", 
+  padding:"12px", 
+  borderRadius:"10px", 
+  border:"none", 
+  background:"#673ab7", 
+  color:"white" 
+};
+
+const overlay={ 
+  position:"fixed", 
+  top:0, 
+  left:0, 
+  width:"100%", 
+  height:"100%", 
+  background:"rgba(0,0,0,0.6)", 
+  display:"flex", 
+  justifyContent:"center", 
+  alignItems:"center" 
+};
+
+const popup={ 
+  background:"white", 
+  padding:"25px", 
+  borderRadius:"15px", 
+  width:"300px", 
+  textAlign:"center" 
+};
+
+const confirmBtn={ 
+  background:"#00c853", 
+  color:"white", 
+  padding:"10px", 
+  marginTop:"10px", 
+  width:"100%" 
+};
+
+const cancelBtn={ 
+  background:"#ff5252", 
+  color:"white", 
+  padding:"10px", 
+  marginTop:"10px", 
+  width:"100%" 
+};
