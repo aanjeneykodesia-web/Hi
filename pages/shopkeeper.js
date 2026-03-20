@@ -306,19 +306,165 @@ Generated: ${new Date().toLocaleString()}
 
 /* STYLES (UNCHANGED) */
 
-const container={ minHeight:"100vh", display:"flex", justifyContent:"center", alignItems:"center", background:"linear-gradient(135deg,#141E30,#243B55)" };
-const card={ background:"white", padding:"35px", borderRadius:"20px", width:"430px", boxShadow:"0 20px 40px rgba(0,0,0,0.2)" };
-const title={ textAlign:"center", fontSize:"30px", fontWeight:"bold" };
-const subtitle={ textAlign:"center", color:"#666", marginBottom:"20px" };
-const input={ width:"100%", padding:"12px", marginBottom:"12px", borderRadius:"10px", border:"1px solid #ddd" };
-const textarea={ width:"100%", padding:"12px", minHeight:"70px", marginBottom:"12px", borderRadius:"10px", border:"1px solid #ddd" };
-const row={ display:"flex", justifyContent:"space-between" };
-const halfInput={ width:"48%", padding:"12px", borderRadius:"10px", border:"1px solid #ddd" };
-const productBtn={ width:"100%", padding:"12px", borderRadius:"10px", border:"none", background:"#ff9800", color:"white" };
-const locationButton={ width:"100%", padding:"10px", borderRadius:"10px", border:"none", background:"#2962ff", color:"white" };
-const submitBtn={ width:"100%", padding:"14px", borderRadius:"12px", border:"none", background:"#00c853", color:"white" };
-const trackBtn={ width:"100%", padding:"12px", borderRadius:"10px", border:"none", background:"#673ab7", color:"white" };
-const overlay={ position:"fixed", top:0, left:0, width:"100%", height:"100%", background:"rgba(0,0,0,0.6)", display:"flex", justifyContent:"center", alignItems:"center" };
-const popup={ background:"white", padding:"25px", borderRadius:"15px", width:"300px", textAlign:"center" };
-const confirmBtn={ background:"#00c853", color:"white", padding:"10px", marginTop:"10px", width:"100%" };
-const cancelBtn={ background:"#ff5252", color:"white", padding:"10px", marginTop:"10px", width:"100%" };
+const container = {
+  minHeight: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  background: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+  padding: "20px"
+};
+
+const card = {
+  background: "rgba(255,255,255,0.95)",
+  backdropFilter: "blur(10px)",
+  padding: "35px",
+  borderRadius: "20px",
+  width: "430px",
+  boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
+  transition: "0.3s"
+};
+
+const title = {
+  textAlign: "center",
+  fontSize: "32px",
+  fontWeight: "bold",
+  marginBottom: "5px",
+  color: "#111"
+};
+
+const subtitle = {
+  textAlign: "center",
+  color: "#666",
+  marginBottom: "20px",
+  fontSize: "14px"
+};
+
+const input = {
+  width: "100%",
+  padding: "14px",
+  marginBottom: "12px",
+  borderRadius: "12px",
+  border: "1px solid #e5e7eb",
+  fontSize: "14px",
+  outline: "none",
+  transition: "0.2s",
+  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)"
+};
+
+const textarea = {
+  width: "100%",
+  padding: "14px",
+  minHeight: "80px",
+  marginBottom: "12px",
+  borderRadius: "12px",
+  border: "1px solid #e5e7eb",
+  fontSize: "14px",
+  background: "#f9fafb"
+};
+
+const row = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "10px"
+};
+
+const halfInput = {
+  width: "50%",
+  padding: "14px",
+  borderRadius: "12px",
+  border: "1px solid #e5e7eb"
+};
+
+const productBtn = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "12px",
+  border: "none",
+  background: "linear-gradient(135deg,#ff9800,#ff5722)",
+  color: "white",
+  fontWeight: "bold",
+  marginBottom: "10px",
+  cursor: "pointer",
+  transition: "0.2s"
+};
+
+const locationButton = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "12px",
+  border: "none",
+  background: "linear-gradient(135deg,#2962ff,#00b0ff)",
+  color: "white",
+  marginTop: "10px",
+  cursor: "pointer"
+};
+
+const submitBtn = {
+  width: "100%",
+  padding: "15px",
+  borderRadius: "14px",
+  border: "none",
+  background: "linear-gradient(135deg,#00c853,#00e676)",
+  color: "white",
+  fontWeight: "bold",
+  marginTop: "15px",
+  cursor: "pointer",
+  fontSize: "16px",
+  boxShadow: "0 10px 25px rgba(0,200,83,0.3)"
+};
+
+const trackBtn = {
+  width: "100%",
+  padding: "13px",
+  borderRadius: "12px",
+  border: "none",
+  background: "linear-gradient(135deg,#673ab7,#9c27b0)",
+  color: "white",
+  marginTop: "10px",
+  cursor: "pointer"
+};
+
+const overlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.7)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center"
+};
+
+const popup = {
+  background: "white",
+  padding: "30px",
+  borderRadius: "18px",
+  width: "320px",
+  textAlign: "center",
+  boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
+};
+
+const confirmBtn = {
+  background: "linear-gradient(135deg,#00c853,#00e676)",
+  color: "white",
+  padding: "12px",
+  marginTop: "12px",
+  width: "100%",
+  border: "none",
+  borderRadius: "10px",
+  fontWeight: "bold",
+  cursor: "pointer"
+};
+
+const cancelBtn = {
+  background: "linear-gradient(135deg,#ff5252,#ff1744)",
+  color: "white",
+  padding: "12px",
+  marginTop: "10px",
+  width: "100%",
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer"
+};
