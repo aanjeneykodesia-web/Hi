@@ -25,15 +25,13 @@ export default function Shopkeeper() {
     "Sugar": { "1kg": 50, "5kg": 240, "10kg": 480 }
   };
 
-  // LOAD PRODUCTS
+  // LOAD SELECTED PRODUCTS
   useEffect(() => {
 
     const saved = localStorage.getItem("selectedProducts");
 
     if (saved) {
-
       const list = JSON.parse(saved);
-
       setProducts(list);
 
       const productString = list
@@ -45,12 +43,6 @@ export default function Shopkeeper() {
         product: productString
       }));
     }
-
-    // Razorpay script
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    document.body.appendChild(script);
 
   }, []);
 
@@ -70,7 +62,7 @@ export default function Shopkeeper() {
     return total;
   };
 
-  // LOCATION
+  // 📍 LOCATION DETECT
   const detectDropLocation = () => {
 
     if (!navigator.geolocation) {
@@ -93,7 +85,7 @@ export default function Shopkeeper() {
     });
   };
 
-  // ✅ INVOICE WITH TOTAL
+  // 🧾 INVOICE
   const generateInvoice = (order) => {
 
     const productList = products
@@ -127,7 +119,7 @@ Generated: ${new Date().toLocaleString()}
     a.click();
   };
 
-  // ✅ FINAL SUBMIT WITH PAYMENT
+  // ✅ DIRECT UPI PAYMENT
   const confirmSubmit = async () => {
 
     if (!form.shopName || products.length === 0) {
@@ -135,69 +127,49 @@ Generated: ${new Date().toLocaleString()}
       return;
     }
 
-    setLoading(true);
-
     const totalAmount = calculateTotal();
 
-    try {
+    // 🔥 CHANGE THIS UPI ID
+    const upiId = "yourupi@okaxis";
 
-      // 🔹 Create payment order
-      const res = await fetch("/api/payment",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json"},
-        body:JSON.stringify({ amount: totalAmount })
-      });
+    const name = "SwiftLogix";
+    const note = `Order Payment ₹${totalAmount}`;
 
-      const order = await res.json();
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
 
-      // 🔹 Razorpay popup
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
-        amount: order.amount,
-        currency: "INR",
-        name: "SwiftLogix",
-        description: `Payment ₹${totalAmount}`,
-        order_id: order.id,
+    // 🚀 OPEN UPI APP
+    window.location.href = upiUrl;
 
-        handler: async function () {
+    // ⏳ WAIT & CREATE ORDER (basic flow)
+    setTimeout(async () => {
 
-          // 🔹 Create order AFTER payment
-          const res2 = await fetch("/api/orders",{
-            method:"POST",
-            headers:{ "Content-Type":"application/json"},
-            body:JSON.stringify({
-              ...form,
-              totalAmount
-            })
-          });
+      try {
 
-          const data = await res2.json();
+        const res = await fetch("/api/orders",{
+          method:"POST",
+          headers:{ "Content-Type":"application/json"},
+          body:JSON.stringify({
+            ...form,
+            totalAmount
+          })
+        });
 
-          generateInvoice(data);
+        const data = await res.json();
 
-          alert("✅ Payment Successful & Order Created");
+        generateInvoice(data);
 
-          localStorage.removeItem("selectedProducts");
-          setProducts([]);
+        alert("✅ Order Created after payment");
 
-          setLoading(false);
-        },
+        localStorage.removeItem("selectedProducts");
+        setProducts([]);
 
-        prefill: {
-          name: form.shopName,
-          contact: form.Mobno
-        },
+        setLoading(false);
 
-        theme: { color:"#00c853" }
-      };
+      } catch (err) {
+        alert("Error creating order");
+      }
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-
-    } catch (err) {
-      alert("Payment failed");
-      setLoading(false);
-    }
+    }, 5000);
   };
 
   return (
@@ -233,7 +205,7 @@ Generated: ${new Date().toLocaleString()}
 
         <input
           name="Mobno"
-          placeholder="Mobno"
+          placeholder="Mobile Number"
           value={form.Mobno}
           onChange={handleChange}
           style={input}
@@ -284,6 +256,7 @@ Generated: ${new Date().toLocaleString()}
 
       </div>
 
+      {/* POPUP */}
       {showPopup && (
 
         <div style={overlay}>
@@ -299,9 +272,8 @@ Generated: ${new Date().toLocaleString()}
               <button
                 onClick={confirmSubmit}
                 style={confirmBtn}
-                disabled={loading}
               >
-                {loading ? "Processing..." : "Pay & Confirm"}
+                Pay via UPI
               </button>
 
               <button
