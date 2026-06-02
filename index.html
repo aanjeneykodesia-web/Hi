@@ -650,42 +650,57 @@
 
     <!-- SHOPKEEPER CART -->
     <main class="page" id="page-sk-cart">
-      <div class="page-header">
-        <div>
-          <div class="page-title">Your Cart</div>
-          <div class="page-subtitle">Review items before placing order</div>
-        </div>
-        <button class="btn btn-outline" onclick="navigate('sk-products')">← Continue Shopping</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;" id="cart-layout">
-        <div class="card">
-          <div id="cart-items-list"></div>
-        </div>
-        <div>
-          <div class="card">
-            <div class="card-title">Order Summary</div>
-            <div id="cart-summary"></div>
-            <div style="margin-top:16px;">
-              <div class="form-group">
-                <label style="display:flex;align-items:center;justify-content:space-between;">
-                  Delivery Address
-                  <button type="button" class="btn btn-ghost btn-sm" id="loc-btn-delivery" onclick="detectLocation('delivery-address','loc-btn-delivery')" style="font-size:11px;height:24px;padding:0 8px;color:var(--primary);">
-                    📍 Detect Location
-                  </button>
-                </label>
-                <textarea rows="3" id="delivery-address" placeholder="Enter full delivery address..."></textarea>
-                <div id="loc-status-delivery" style="font-size:11px;color:var(--muted-fg);margin-top:4px;display:none;"></div>
-              </div>
-              <div class="form-group">
-                <label>Special Instructions</label>
-                <textarea rows="2" id="order-notes" placeholder="Any special instructions..."></textarea>
-              </div>
-              <button class="btn btn-primary" style="width:100%;" onclick="openPaymentModal()">💳 Pay & Place Order →</button>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Your Cart</div>
+      <div class="page-subtitle">Review items before placing order</div>
+    </div>
+    <button class="btn btn-outline" onclick="navigate('sk-products')">← Continue Shopping</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;" id="cart-layout">
+    <div class="card">
+      <div id="cart-items-list"></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Order Summary</div>
+        <div id="cart-summary"></div>
+        <div style="margin-top:16px;">
+          
+          <div class="form-group">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              Delivery Address
+              <button type="button" class="btn btn-ghost btn-sm" id="loc-btn-delivery" onclick="detectLocation('delivery-address','loc-btn-delivery')" style="font-size:11px;height:24px;padding:0 8px;color:var(--primary);">
+                📍 Detect Location
+              </button>
+            </label>
+            <textarea rows="3" id="delivery-address" placeholder="Enter full delivery address..."></textarea>
+            <div id="loc-status-delivery" style="font-size:11px;color:var(--muted-fg);margin-top:4px;display:none;"></div>
+          </div>
+
+          <div class="two-col" style="margin-top:12px; margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Latitude</label>
+              <input type="text" id="delivery-lat" placeholder="Auto-detected" readonly style="background:var(--bg); color:var(--muted-fg);">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Longitude</label>
+              <input type="text" id="delivery-lng" placeholder="Auto-detected" readonly style="background:var(--bg); color:var(--muted-fg);">
             </div>
           </div>
+
+          <div class="form-group">
+            <label>Special Instructions</label>
+            <textarea rows="2" id="order-notes" placeholder="Any special instructions..."></textarea>
+          </div>
+          
+          <button class="btn btn-primary" style="width:100%;" onclick="openPaymentModal()">💳 Pay & Place Order →</button>
         </div>
       </div>
+    </div>
+  </div>
     </main>
+    
 
     <!-- SHOPKEEPER MY ORDERS -->
     <main class="page" id="page-sk-orders">
