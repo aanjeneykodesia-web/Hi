@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScriptOps · Remote Script Execution</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+    <style>
+        /* ── reset & base ── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f6f8fc;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        /* ── cards & containers ── */
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .app-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #eaedf2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: #fafcff;
+        }
+        .app-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .app-header h1 span {
+            background: #2563eb;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 12px;
+            border-radius: 100px;
+            letter-spacing: 0.3px;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .badge-key {
+            background: #f1f4f9;
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', monospace;
+            letter-spacing: 0.2px;
+            border: 1px solid #e2e8f0;
+        }
+        .badge-key .key-value {
+            color: #2563eb;
+            font-weight: 600;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            background: #f1f4f9;
+            color: #1e293b;
+        }
+        .btn:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-success {
+            background: #22c55e;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #16a34a;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #e2e8f0;
+        }
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+        .btn-sm {
+            padding: 5px 14px;
+            font-size: 12px;
+        }
+        /* ── main layout ── */
+        .app-body {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 0;
+            min-height: 500px;
+        }
+        @media (max-width: 860px) {
+            .app-body {
+                grid-template-columns: 1fr;
+            }
+        }
+        .main-panel {
+            padding: 32px;
+            border-right: 1px solid #eaedf2;
+        }
+        .side-panel {
+            padding: 32px;
+            background: #fafcff;
+        }
+        /* ── forms ── */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+        .form-group textarea,
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="email"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            font-size: 14px;
+            font-family: 'Inter', monospace;
+            background: #fff;
+            transition: border 0.15s ease;
+            resize: vertical;
+        }
+        .form-group textarea:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+        }
+        .form-group textarea {
+            min-height: 100px;
+            font-family: 'Inter', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .form-row .form-group {
+            flex: 1;
+            min-width: 160px;
+            margin-bottom: 0;
+        }
+        /* ── output / logs ── */
+        .output-box {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 16px;
+            padding: 16px 20px;
+            font-family: 'Inter', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            min-height: 120px;
+            max-height: 320px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: 12px;
+            border: 1px solid #1e293b;
+        }
+        .output-box .empty {
+            color: #64748b;
+            font-style: italic;
+        }
+        .output-box .success {
+            color: #4ade80;
+        }
+        .output-box .error {
+            color: #f87171;
+        }
+        .output-box .info {
+            color: #60a5fa;
+        }
+        /* ── history list ── */
+        .history-list {
+            margin-top: 12px;
+            max-height: 340px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .history-item {
+            background: #fff;
+            border: 1px solid #eaedf2;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            transition: background 0.1s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .history-item:hover {
+            background: #f8fafc;
+        }
+        .history-item .cmd {
+            font-family: 'Inter', monospace;
+            font-weight: 500;
+            color: #1e293b;
+            word-break: break-all;
+        }
+        .history-item .meta {
+            color: #64748b;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+            white-space: nowrap;
+        }
+        .history-item .status-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 100px;
+            background: #f1f4f9;
+            color: #475569;
+        }
+        .history-item .status-badge.success {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .history-item .status-badge.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .history-item .status-badge.running {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        /* ── auth screens ── */
+        .auth-screen {
+            padding: 48px 40px;
+            max-width: 420px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .auth-screen h2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .auth-screen .sub {
+            color: #64748b;
+            font-size: 15px;
+            margin-top: -8px;
+        }
+        .auth-screen .switch-link {
+            color: #2563eb;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .auth-screen .switch-link:hover {
+            text-decoration: underline;
+        }
+        .auth-screen .error-msg {
+            color: #dc2626;
+            font-size: 14px;
+            background: #fee2e2;
+            padding: 10px 16px;
+            border-radius: 12px;
+            display: none;
+        }
+        .auth-screen .error-msg.visible {
+            display: block;
+        }
+        /* ── agent setup card ── */
+        .agent-card {
+            background: #f1f5f9;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .agent-card h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .agent-card p {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.6;
+        }
+        .agent-card code {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 2px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: inline-block;
+            margin-top: 4px;
+            font-family: 'Inter', monospace;
+        }
+        .agent-card .copy-btn {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .agent-card .copy-btn:hover {
+            text-decoration: underline;
+        }
+        /* ── misc ── */
+        .flex {
+            display: flex;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .gap-2 {
+            gap: 8px;
+        }
+        .gap-3 {
+            gap: 12px;
+        }
+        .mt-2 {
+            margin-top: 8px;
+        }
+        .mt-3 {
+            margin-top: 16px;
+        }
+        .mt-4 {
+            margin-top: 24px;
+        }
+        .mb-2 {
+            margin-bottom: 8px;
+        }
+        .text-sm {
+            font-size: 13px;
+        }
+        .text-muted {
+            color: #64748b;
+        }
+        .font-mono {
+            font-family: 'Inter', monospace;
+        }
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 160px;
+        }
+        /* ── scrollbar ── */
+        .output-box::-webkit-scrollbar,
+        .history-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .output-box::-webkit-scrollbar-track,
+        .history-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .output-box::-webkit-scrollbar-thumb,
+        .history-list::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 8px;
+        }
+        /* ── toast ── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 14px 24px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.25s ease;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success {
+            background: #16a34a;
+        }
+        .toast.error {
+            background: #dc2626;
+        }
+        /* loading spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid #e2e8f0;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .hidden {
+            display: none !important;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .agent-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .agent-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .agent-status .dot.online {
+            background: #22c55e;
+        }
+        .agent-status .dot.offline {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="app">
+        <!-- header -->
+        <header class="app-header">
+            <h1>⚡ ScriptOps <span>API</span></h1>
+            <div class="header-actions" id="headerActions">
+                <!-- filled dynamically -->
+            </div>
+        </header>
+
+        <!-- body -->
+        <div class="app-body" id="appBody">
+            <!-- main panel -->
+            <div class="main-panel" id="mainPanel">
+                <!-- auth screens -->
+                <div id="authContainer">
+                    <!-- Login -->
+                    <div id="loginScreen" class="auth-screen">
+                        <h2>Welcome back</h2>
+                        <p class="sub">Sign in to manage your remote scripts.</p>
+                        <div class="error-msg" id="loginError"></div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="loginEmail" placeholder="you@example.com" />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPassword" placeholder="••••••••" />
+                        </div>
+                        <button class="btn btn-primary w-full" id="loginBtn">Sign In</button>
+                        <p class="text-sm text-muted mt-2">
+                            Don't have an account?
+                            <span class="switch-link" data-screen="register">Create one</span>
+                        </p>
+                    </div>
+
+                    <!-- Register -->
+                    <div id="registerScreen" class="auth-screen" style="display:none;">
+                        <h2>Create account</h2>
+                        <p class="sub">Get your API key and start executing scripts.</p>
+                        <div class="error-msg" id="registerError"></div>
+                        <div class="form-group">
+                            <label>Full name</label>
+                            <input type="text" id="registerName" placeholder="Jane Doe" />
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="registerEmail" placeholder="you@example.com" />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="registerPassword" placeholder="••••••••" />
+                        </div>
+                        <button class="btn btn-primary w-full" id="registerBtn">Create Account</button>
+                        <p class="text-sm text-muted mt-2">
+                            Already have an account?
+                            <span class="switch-link" data-screen="login">Sign in</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- dashboard (hidden until auth) -->
+                <div id="dashboardContainer" style="display:none;">
+                    <div class="flex-between mb-2">
+                        <h3 style="font-weight:600; font-size:18px;">▶ Execute Script</h3>
+                        <span class="agent-status" id="agentStatus">
+                            <span class="dot offline" id="agentDot"></span>
+                            <span id="agentLabel">Agent offline</span>
+                        </span>
+                    </div>
+                    <div class="form-group">
+                        <label>Command / Script</label>
+                        <textarea id="cmdInput" placeholder="# Example: echo 'Hello from ScriptOps!'\nls -la\nnode --version"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Timeout (seconds)</label>
+                            <input type="text" id="cmdTimeout" value="30" style="width:100px;" />
+                        </div>
+                        <button class="btn btn-success" id="executeBtn" style="margin-bottom:2px;">
+                            ⚡ Execute
+                        </button>
+                        <button class="btn btn-outline" id="clearOutputBtn">Clear</button>
+                    </div>
+
+                    <div class="output-box" id="outputBox">
+                        <span class="empty">⏳ Output will appear here …</span>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="flex-between">
+                            <h4 style="font-weight:600; font-size:15px;">📋 Execution History</h4>
+                            <button class="btn btn-sm btn-outline" id="clearHistoryBtn">Clear</button>
+                        </div>
+                        <div class="history-list" id="historyList">
+                            <div class="text-muted text-sm" style="padding:8px 0;">No executions yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- side panel -->
+            <div class="side-panel" id="sidePanel">
+                <div id="sideAuth" style="display:flex; flex-direction:column; gap:16px;">
+                    <h4 style="font-weight:600; font-size:15px;">🔑 API Key</h4>
+                    <div id="apiKeyDisplay">
+                        <div class="badge-key" style="width:100%; justify-content:space-between;">
+                            <span>Your key</span>
+                            <span class="key-value" id="apiKeyValue">—</span>
+                            <button class="btn btn-sm btn-outline" id="copyKeyBtn" style="padding:2px 12px;">Copy</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" id="regenerat
