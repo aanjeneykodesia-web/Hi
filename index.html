@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Actions Panel</title>
+<style>
+:root{--bg:#f6f8fa;--card:#fff;--text:#1f2328;--muted:#656d76;--line:#d0d7de;--accent:#2da44e;--blue:#0969da;--red:#cf222e;--yellow:#9a6700}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--card:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#30363d;--accent:#238636;--blue:#58a6ff;--red:#f85149;--yellow:#d29922}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
+main{max-width:720px;margin:0 auto}
+h1{font-size:22px;margin:8px 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 8px}
+input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font-size:15px}
+button{cursor:pointer;border:0;background:var(--accent);color:#fff;padding:8px 14px;border-radius:6px;font-size:14px}
+button:disabled{opacity:.5}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.small{font-size:12px;color:var(--muted)}
+a{color:var(--blue);text-decoration:none}
+.badge{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.success{color:var(--accent)}.failure{color:var(--red)}.progress{color:var(--yellow)}
+#msg{font-size:13px;min-height:18px;margin-bottom:10px}.err{color:var(--red)}.ok{color:var(--accent)}
+.hide{display:none}
+</style></head><body><main>
+<h1>⚡ Actions Panel</h1>
+<div id="msg"></div>
+<div class="card hide" id="gate">
+  <h2>Access code</h2>
+  <div style="display:flex;gap:8px"><input id="code" type="password" placeholder="Enter access code"><button id="enter">Enter</button></div>
+</div>
+<div class="card hide" id="wfCard"><h2>Workflows</h2><div id="wfs"></div></div>
+<div class="card hide" id="runCard"><h2>Recent runs &amp; logs</h2><div id="runs"></div></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let code=sessionStorage.getItem('code')||'';
+const say=(t,c)=>{$('msg').textContent=t;$('msg').className=c||''};
+
+async function api(path,opts={}){
+  opts.headers={'x-access-code':code,...(opts.headers||{})};
+  const r=await fetch(path,opts);
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401){$('gate').classList.remove('hide');$('wfCard').classList.add('hide');$('runCard').classList.add('hide');throw new Error('Access code required')}
+  if(!r.ok)throw new Error(d.error||r.statusText);
+  return d;
+}
+$('enter').onclick=()=>{code=$('code').value.trim();sessionStorage.setItem('code',code);$('gate').classList.add('hide');say('');init()};
+
+function st(r){
+  if(r.status!=='completed')return['⏳ '+r.status.replace('_',' '),'progress'];
+  return r.conclusion==='success'?['✅ success','success']:['❌ '+(r.conclusion||'done'),'failure'];
+}
+
+async function init(){
+  try{
+    const d=await api('/api/workflows');
+    $('wfCard').classList.remove('hide');$('runCard').classList.remove('hide');
+    const box=$('wfs');box.innerHTML='';
+    if(!d.workflows.length)box.textContent='No workflows available.';
+    d.workflows.forEach(w=>{
+      const row=document.createElement('div');row.className='item';
+      const info=document.createElement('div');
+      const n=document.createElement('div');n.textContent=w.name;
+      const p=document.createElement('div');p.className='small';p.textContent=w.path;
+      info.append(n,p);
+      const b=document.createElement('button');b.textContent='▶ Run';
+      b.onclick=async()=>{
+        b.disabled=true;b.textContent='Starting…';
+        try{
+          await api('/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow_id:w.id})});
+          say('Triggered “'+w.name+'”. Waiting for run to appear…','ok');setTimeout(runs,2500);
+        }catch(e){say(e.message,'err')}
+        b.disabled=false;b.textContent='▶ Run';
+      };
+      row.append(info,b);box.appendChild(row);
+    });
+    runs();
+  }catch(e){say(e.message,'err')}
+}
+
+async function runs(){
+  try{
+    const d=await api('/api/runs');
+    const box=$('runs');box.innerHTML='';
+    if(!d.runs.length)box.textContent='No runs yet.';
+    d.runs.forEach(x=>{
+      const row=document.createElement('div');row.className='item';
+      const info=document.createElement('div');
+      const a=document.createElement('a');a.href=x.html_url;a.target='_blank';a.rel='noopener';a.textContent=(x.name||'Workflow')+' #'+x.run_number;
+      const m=document.createElement('div');m.className='small';m.textContent=x.branch+' · '+new Date(x.created_at).toLocaleString();
+      const l=document.createElement('a');l.href=x.html_url;l.target='_blank';l.rel='noopener';l.className='small';l.textContent='View logs ↗';
+      info.append(a,m,l);
+      const [t,c]=st(x),bd=document.createElement('span');bd.className='badge '+c;bd.textContent=t;
+      row.append(info,bd);box.appendChild(row);
+    });
+  }catch(e){}
+}
+setInterval(()=>{if(!document.hidden&&!$('wfCard').classList.contains('hide'))runs()},5000);
+init();
+</script></body></html>
