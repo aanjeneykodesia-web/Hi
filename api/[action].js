@@ -30,7 +30,7 @@ async function allowedWorkflows() {
 
 module.exports = async (req, res) => {
   const { ACCESS_CODE, GITHUB_TOKEN, REPO, REF } = process.env;
-  if (!GITHUB_TOKEN || !REPO) return res.status(500).json({ error: 'Server not configured' });
+  if (!GIT_TOKEN || !REPO) return res.status(500).json({ error: 'Server not configured' });
   if (ACCESS_CODE && req.headers['x-access-code'] !== ACCESS_CODE)
     return res.status(401).json({ error: 'Unauthorized' });
 
