@@ -11,7 +11,7 @@ const gh = (path, opts = {}) =>
     ...opts,
     headers: {
       Accept: 'application/vnd.github+json',
-      Authorization: 'Bearer ' + process.env.GITHUB_TOKEN,
+      Authorization: 'Bearer ' + process.env.GIT_TOKEN,
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'actions-panel',
       ...(opts.headers || {}),
@@ -29,7 +29,7 @@ async function allowedWorkflows() {
 }
 
 module.exports = async (req, res) => {
-  const { ACCESS_CODE, GITHUB_TOKEN, REPO, REF } = process.env;
+  const { ACCESS_CODE, GIT_TOKEN, REPO, REF } = process.env;
   if (!GITHUB_TOKEN || !REPO) return res.status(500).json({ error: 'Server not configured' });
   if (ACCESS_CODE && req.headers['x-access-code'] !== ACCESS_CODE)
     return res.status(401).json({ error: 'Unauthorized' });
